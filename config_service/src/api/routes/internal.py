@@ -19,6 +19,7 @@ from src.db import repository
 from src.db.config_models import NodeConfiguration
 from src.db.config_repository import get_or_create_node_configuration
 from src.db.models import (
+    AgentRun,
     GitHubInstallation,
     Integration,
     OrgNode,
@@ -85,6 +86,14 @@ class AgentRunCompleteRequest(BaseModel):
     confidence: Optional[float] = None
     thoughts: Optional[list] = None  # [{text, ts, seq}, ...]
     sdk_session_id: Optional[str] = None
+    # LLM usage for this run (SDK ResultMessage, per-turn delta). Optional so
+    # agents that predate usage reporting keep working.
+    cost_usd: Optional[float] = Field(default=None, ge=0)
+    input_tokens: Optional[int] = Field(default=None, ge=0)
+    output_tokens: Optional[int] = Field(default=None, ge=0)
+    cache_read_input_tokens: Optional[int] = Field(default=None, ge=0)
+    cache_creation_input_tokens: Optional[int] = Field(default=None, ge=0)
+    model_usage: Optional[Dict[str, Any]] = None
 
 
 class AgentRunResponse(BaseModel):
@@ -102,6 +111,46 @@ class AgentRunResponse(BaseModel):
     output_summary: Optional[str] = None
     output_json: Optional[dict] = None
     error_message: Optional[str] = None
+    trigger_source: Optional[str] = None
+    trigger_actor: Optional[str] = None
+    metadata: Optional[dict] = None
+    sdk_session_id: Optional[str] = None
+    cost_usd: Optional[float] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cache_read_input_tokens: Optional[int] = None
+    cache_creation_input_tokens: Optional[int] = None
+    model_usage: Optional[dict] = None
+
+
+def _agent_run_response(run: AgentRun, *, include_output_json: bool = True):
+    """Build the internal AgentRunResponse for a row (one place for all routes)."""
+    return AgentRunResponse(
+        id=run.id,
+        org_id=run.org_id,
+        team_node_id=run.team_node_id,
+        correlation_id=run.correlation_id,
+        agent_name=run.agent_name,
+        status=run.status,
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        duration_seconds=run.duration_seconds,
+        tool_calls_count=run.tool_calls_count,
+        trigger_message=run.trigger_message,
+        output_summary=run.output_summary,
+        output_json=run.output_json if include_output_json else None,
+        error_message=run.error_message,
+        trigger_source=run.trigger_source,
+        trigger_actor=run.trigger_actor,
+        metadata=run.extra_metadata,
+        sdk_session_id=run.sdk_session_id,
+        cost_usd=run.cost_usd,
+        input_tokens=run.input_tokens,
+        output_tokens=run.output_tokens,
+        cache_read_input_tokens=run.cache_read_input_tokens,
+        cache_creation_input_tokens=run.cache_creation_input_tokens,
+        model_usage=run.model_usage,
+    )
 
 
 @router.post("/agent-runs", response_model=AgentRunResponse)
@@ -126,22 +175,7 @@ def create_agent_run(
     )
     session.commit()
 
-    return AgentRunResponse(
-        id=run.id,
-        org_id=run.org_id,
-        team_node_id=run.team_node_id,
-        correlation_id=run.correlation_id,
-        agent_name=run.agent_name,
-        status=run.status,
-        started_at=run.started_at,
-        completed_at=run.completed_at,
-        duration_seconds=run.duration_seconds,
-        tool_calls_count=run.tool_calls_count,
-        trigger_message=run.trigger_message,
-        output_summary=run.output_summary,
-        output_json=run.output_json,
-        error_message=run.error_message,
-    )
+    return _agent_run_response(run)
 
 
 @router.patch("/agent-runs/{run_id}", response_model=AgentRunResponse)
@@ -163,6 +197,12 @@ def complete_agent_run(
         confidence=request.confidence,
         thoughts=request.thoughts,
         sdk_session_id=request.sdk_session_id,
+        cost_usd=request.cost_usd,
+        input_tokens=request.input_tokens,
+        output_tokens=request.output_tokens,
+        cache_read_input_tokens=request.cache_read_input_tokens,
+        cache_creation_input_tokens=request.cache_creation_input_tokens,
+        model_usage=request.model_usage,
     )
 
     if not run:
@@ -170,22 +210,7 @@ def complete_agent_run(
 
     session.commit()
 
-    return AgentRunResponse(
-        id=run.id,
-        org_id=run.org_id,
-        team_node_id=run.team_node_id,
-        correlation_id=run.correlation_id,
-        agent_name=run.agent_name,
-        status=run.status,
-        started_at=run.started_at,
-        completed_at=run.completed_at,
-        duration_seconds=run.duration_seconds,
-        tool_calls_count=run.tool_calls_count,
-        trigger_message=run.trigger_message,
-        output_summary=run.output_summary,
-        output_json=run.output_json,
-        error_message=run.error_message,
-    )
+    return _agent_run_response(run)
 
 
 class AgentRunThoughtsRequest(BaseModel):
@@ -307,21 +332,7 @@ def list_agent_runs_internal(
 
     return AgentRunListResponse(
         runs=[
-            AgentRunResponse(
-                id=run.id,
-                org_id=run.org_id,
-                team_node_id=run.team_node_id,
-                correlation_id=run.correlation_id,
-                agent_name=run.agent_name,
-                status=run.status,
-                started_at=run.started_at,
-                completed_at=run.completed_at,
-                duration_seconds=run.duration_seconds,
-                tool_calls_count=run.tool_calls_count,
-                trigger_message=run.trigger_message,
-                output_summary=run.output_summary,
-                error_message=run.error_message,
-            )
+            _agent_run_response(run, include_output_json=False)
             for run in runs
         ],
         total=len(runs),
@@ -486,22 +497,7 @@ def get_agent_run(
     run = repository.get_agent_run(session, run_id=run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Agent run not found")
-    return AgentRunResponse(
-        id=run.id,
-        org_id=run.org_id,
-        team_node_id=run.team_node_id,
-        correlation_id=run.correlation_id,
-        agent_name=run.agent_name,
-        status=run.status,
-        started_at=run.started_at,
-        completed_at=run.completed_at,
-        duration_seconds=run.duration_seconds,
-        tool_calls_count=run.tool_calls_count,
-        trigger_message=run.trigger_message,
-        output_summary=run.output_summary,
-        output_json=run.output_json,
-        error_message=run.error_message,
-    )
+    return _agent_run_response(run)
 
 
 # ==================== Agent Tool Calls ====================

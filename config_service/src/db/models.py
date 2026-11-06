@@ -653,6 +653,21 @@ class AgentRun(Base):
     # SystemMessage (ResultMessage as backup); may be set while status=running.
     sdk_session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
+    # LLM usage for this run (SDK ResultMessage, per-turn delta). Nullable:
+    # older runs and runs that never reached a ResultMessage have none.
+    cost_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    input_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    output_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    cache_read_input_tokens: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    cache_creation_input_tokens: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    model_usage: Mapped[Optional[dict]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=True
+    )
+
     # Extra metadata
     extra_metadata: Mapped[Optional[dict]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), nullable=True

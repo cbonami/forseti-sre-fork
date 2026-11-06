@@ -681,6 +681,15 @@ class AgentRunResponse(BaseModel):
     errorMessage: Optional[str] = None
     confidence: Optional[int] = None
     sdkSessionId: Optional[str] = None
+    # Free-form run metadata (e.g. alert ids, policy id, batch id for
+    # trigger_source "alert") and LLM usage/cost for the run.
+    metadata: Optional[dict] = None
+    costUsd: Optional[float] = None
+    inputTokens: Optional[int] = None
+    outputTokens: Optional[int] = None
+    cacheReadInputTokens: Optional[int] = None
+    cacheCreationInputTokens: Optional[int] = None
+    modelUsage: Optional[dict] = None
 
 
 def _investigation_thread_key_expr():
@@ -723,6 +732,13 @@ def _agent_run_to_response(run: AgentRun) -> AgentRunResponse:
         errorMessage=run.error_message,
         confidence=run.confidence,
         sdkSessionId=run.sdk_session_id,
+        metadata=run.extra_metadata or None,
+        costUsd=run.cost_usd,
+        inputTokens=run.input_tokens,
+        outputTokens=run.output_tokens,
+        cacheReadInputTokens=run.cache_read_input_tokens,
+        cacheCreationInputTokens=run.cache_creation_input_tokens,
+        modelUsage=run.model_usage,
     )
 
 

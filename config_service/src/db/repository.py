@@ -1154,8 +1154,18 @@ def complete_agent_run(
     confidence: Optional[int] = None,
     thoughts: Optional[list] = None,
     sdk_session_id: Optional[str] = None,
+    cost_usd: Optional[float] = None,
+    input_tokens: Optional[int] = None,
+    output_tokens: Optional[int] = None,
+    cache_read_input_tokens: Optional[int] = None,
+    cache_creation_input_tokens: Optional[int] = None,
+    model_usage: Optional[Dict[str, Any]] = None,
 ) -> Optional[AgentRun]:
-    """Mark an agent run as completed/failed/timeout."""
+    """Mark an agent run as completed/failed/timeout.
+
+    Usage/cost fields are only written when supplied (None leaves the column
+    untouched), so older agents that do not send usage keep working.
+    """
     run = session.execute(
         select(AgentRun).where(AgentRun.id == run_id)
     ).scalar_one_or_none()
@@ -1179,6 +1189,18 @@ def complete_agent_run(
     run.confidence = confidence
     if sdk_session_id is not None:
         run.sdk_session_id = sdk_session_id
+    if cost_usd is not None:
+        run.cost_usd = cost_usd
+    if input_tokens is not None:
+        run.input_tokens = input_tokens
+    if output_tokens is not None:
+        run.output_tokens = output_tokens
+    if cache_read_input_tokens is not None:
+        run.cache_read_input_tokens = cache_read_input_tokens
+    if cache_creation_input_tokens is not None:
+        run.cache_creation_input_tokens = cache_creation_input_tokens
+    if model_usage is not None:
+        run.model_usage = model_usage
 
     if run.started_at:
         # Handle timezone-aware vs naive datetime comparison
