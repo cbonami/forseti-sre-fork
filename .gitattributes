@@ -1,0 +1,9 @@
+# Force LF everywhere: the stack is built and run from WSL/Linux containers,
+# and Windows checkouts with core.autocrlf=true would otherwise break shell scripts.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.gif binary
+*.woff binary
+*.woff2 binary
