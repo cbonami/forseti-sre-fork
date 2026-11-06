@@ -1,0 +1,81 @@
+# Read-only identity for the Forseti/OpenSRE agent's Kubernetes skill.
+# get/list/watch on common workload/debug resources, including pods/log and
+# events. Deliberately NO secrets, NO pods/exec|attach|portforward, NO writes.
+# scripts/gen-agent-kubeconfig.sh turns the token below into
+# .local/kubeconfig-agent.yaml (context "local-k3s-ro").
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: forseti-agent-ro
+---
+# Long-lived token (dev only). Kubernetes fills in token/ca.crt.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: forseti-agent-ro-token
+  annotations:
+    kubernetes.io/service-account.name: forseti-agent-ro
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: forseti-agent-ro
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - events
+      - services
+      - endpoints
+      - nodes
+      - namespaces
+      - configmaps
+      - persistentvolumeclaims
+      - persistentvolumes
+      - replicationcontrollers
+      - resourcequotas
+      - limitranges
+      - serviceaccounts
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets, daemonsets, controllerrevisions]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - apiGroups: [events.k8s.io]
+    resources: [events]
+    verbs: [get, list, watch]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses]
+    verbs: [get, list, watch]
+  - apiGroups: [metrics.k8s.io]
+    resources: [pods, nodes]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: forseti-agent-ro
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: forseti-agent-ro
+subjects:
+  - kind: ServiceAccount
+    name: forseti-agent-ro
+    namespace: observability

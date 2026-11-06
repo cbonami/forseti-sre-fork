@@ -11,6 +11,7 @@ resources:
   - webhook-sinks.yaml
   - synthetic-exporter.yaml
   - expose.yaml
+  - agent-rbac.yaml
 
 labels:
   - pairs:
