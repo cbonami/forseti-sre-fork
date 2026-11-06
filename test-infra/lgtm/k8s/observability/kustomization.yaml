@@ -1,0 +1,39 @@
+# kubectl --context rancher-desktop apply -k test-infra/lgtm/k8s/observability
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+
+resources:
+  - namespace.yaml
+  - lgtm.yaml
+  - thanos-query.yaml
+  - alertmanager.yaml
+  - webhook-sinks.yaml
+  - expose.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: forseti-test-infra
+    includeSelectors: false
+
+# Hash-suffixed ConfigMaps: a content change gets a new name, which changes
+# the pod template and rolls the Deployment (prometheus.yaml is a subPath
+# mount, which never live-updates).
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - config/prometheus.yaml
+  - name: alertmanager-config
+    files:
+      - config/alertmanager.yml
+  - name: thanos-endpoints
+    files:
+      - endpoints.yaml=config/thanos-endpoints.yaml
+  - name: synthetic-scripts
+    files:
+      - files/webhook_sink.py
+  # Rules keep a stable name: the directory mount live-updates and the Thanos
+  # sidecar reloader POSTs /-/reload to Prometheus, no pod restart needed.
+  - name: prometheus-rules
+    options:
+      disableNameSuffixHash: true

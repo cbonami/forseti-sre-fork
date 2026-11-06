@@ -1,0 +1,48 @@
+# Host exposure. k3s ServiceLB (klipper) binds these ports on the node
+# (192.168.127.2) and Rancher Desktop forwards LoadBalancer ports to the
+# Windows host's localhost. Ports avoid OpenSRE's 3002/8001/8081/5433/7475/7688/4001.
+#
+#   Grafana        localhost:13000   (container 3000)
+#   Loki           localhost:13100   (container 3100)
+#   Tempo          localhost:13200   (container 3200)
+#   OTLP gRPC/HTTP localhost:14317 / 14318
+#   Prometheus     localhost:19090   (container 9090)
+#   Thanos Query   localhost:19091   (container 10902)
+#   Alertmanager   localhost:19093   (container 9093)
+apiVersion: v1
+kind: Service
+metadata:
+  name: lgtm-external
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: lgtm
+  ports:
+    - {name: grafana, port: 13000, targetPort: grafana}
+    - {name: loki, port: 13100, targetPort: loki}
+    - {name: tempo, port: 13200, targetPort: tempo}
+    - {name: otlp-grpc, port: 14317, targetPort: otlp-grpc}
+    - {name: otlp-http, port: 14318, targetPort: otlp-http}
+    - {name: prometheus, port: 19090, targetPort: prometheus}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thanos-query-external
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: thanos-query
+  ports:
+    - {name: http, port: 19091, targetPort: http}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-external
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: alertmanager
+  ports:
+    - {name: http, port: 19093, targetPort: http}

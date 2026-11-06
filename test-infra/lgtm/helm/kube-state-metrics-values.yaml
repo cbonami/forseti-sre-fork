@@ -1,0 +1,15 @@
+# prometheus-community/kube-state-metrics 9.0.0 (app v2.20.0)
+# helm upgrade --install kube-state-metrics prometheus-community/kube-state-metrics \
+#   --version 9.0.0 -n observability -f this-file
+fullnameOverride: kube-state-metrics
+# Prometheus scrapes it with a static target (see config/prometheus.yaml);
+# the annotation-based scrape hint is not used.
+prometheusScrape: false
+# Expose these pod labels as kube_pod_labels{label_app_kubernetes_io_*}; the
+# rules derive a `service` label from them.
+metricLabelsAllowlist:
+  - pods=[app.kubernetes.io/name,app.kubernetes.io/component]
+  - deployments=[app.kubernetes.io/name,app.kubernetes.io/component]
+resources:
+  requests: {cpu: 20m, memory: 48Mi}
+  limits: {memory: 192Mi}

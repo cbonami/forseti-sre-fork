@@ -1,0 +1,4 @@
+# Thanos Query endpoint config (--endpoint.sd-config-file). Schema:
+# cmd/thanos/endpointset.go (EndpointConfig) in thanos v0.42.5.
+endpoints:
+  - address: thanos-sidecar.observability.svc.cluster.local:10901

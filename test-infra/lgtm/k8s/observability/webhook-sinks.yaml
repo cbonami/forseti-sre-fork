@@ -1,0 +1,106 @@
+# Two echo sinks standing in for Alertmanager webhook receivers until the real
+# intake exists:
+#   sink-forseti      -> the future Forseti intake (wave 2: config-service webhook)
+#   sink-scom-legacy  -> a legacy forwarder that sends scom="true" alerts to SCOM
+# Both log each payload as one JSON line (kubectl logs deploy/sink-forseti).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sink-forseti
+  labels:
+    app.kubernetes.io/name: sink-forseti
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sink-forseti
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sink-forseti
+    spec:
+      containers:
+        - name: sink
+          image: python:3.13.9-slim
+          command: [python3, -u, /app/webhook_sink.py]
+          env:
+            - {name: SINK_NAME, value: forseti}
+            - {name: PORT, value: "8080"}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 24Mi}
+            limits: {memory: 96Mi}
+          securityContext:
+            runAsUser: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - {name: app, mountPath: /app}
+      volumes:
+        - name: app
+          configMap:
+            name: synthetic-scripts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sink-forseti
+spec:
+  selector:
+    app.kubernetes.io/name: sink-forseti
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sink-scom-legacy
+  labels:
+    app.kubernetes.io/name: sink-scom-legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sink-scom-legacy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sink-scom-legacy
+    spec:
+      containers:
+        - name: sink
+          image: python:3.13.9-slim
+          command: [python3, -u, /app/webhook_sink.py]
+          env:
+            - {name: SINK_NAME, value: scom-legacy}
+            - {name: PORT, value: "8080"}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 24Mi}
+            limits: {memory: 96Mi}
+          securityContext:
+            runAsUser: 65534
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - {name: app, mountPath: /app}
+      volumes:
+        - name: app
+          configMap:
+            name: synthetic-scripts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sink-scom-legacy
+spec:
+  selector:
+    app.kubernetes.io/name: sink-scom-legacy
+  ports:
+    - {name: http, port: 8080, targetPort: http}

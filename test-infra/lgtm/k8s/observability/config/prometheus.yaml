@@ -1,0 +1,114 @@
+---
+# Prometheus config for the in-cluster grafana/otel-lgtm:0.40.0 pod.
+#
+# Base: verbatim copy of /otel-lgtm/prometheus.yaml from grafana/otel-lgtm:0.40.0
+# (global.scrape_native_histograms, otlp.*, storage.tsdb.out_of_order_time_window).
+# Additions for the production-like environment are marked "forseti:".
+#
+# Mounted over /otel-lgtm/prometheus.yaml (subPath). Changing this file changes
+# the generated ConfigMap name (kustomize hash) and therefore rolls the pod.
+# Rule files are reloaded live by the Thanos sidecar (--reloader.rule-dir).
+global:
+  scrape_native_histograms: true
+  # forseti: explicit intervals (upstream relies on the 1m defaults)
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  # forseti: Thanos needs unique external labels per Prometheus; they are also
+  # attached to every alert sent to Alertmanager.
+  external_labels:
+    cluster: local-k3s
+    env: dev
+otlp:
+  keep_identifying_resource_attributes: true
+  # Recommended attributes to be promoted to labels.
+  promote_resource_attributes:
+    - service.instance.id
+    - service.name
+    - service.namespace
+    - service.version
+    - cloud.availability_zone
+    - cloud.region
+    - container.name
+    - deployment.environment # backward compatibility
+    - deployment.environment.name
+    - k8s.cluster.name
+    - k8s.container.name
+    - k8s.cronjob.name
+    - k8s.daemonset.name
+    - k8s.deployment.name
+    - k8s.job.name
+    - k8s.namespace.name
+    - k8s.node.name
+    - k8s.pod.name
+    - k8s.replicaset.name
+    - k8s.statefulset.name
+    - host.name
+    - postgresql.database.name
+    - postgresql.schema.name
+    - postgresql.table.name
+    - postgresql.index.name
+    - database # used by otelcol/receiver/mongodb
+    - kafka.cluster.alias
+storage:
+  tsdb:
+    # A 10min time window is enough because it can easily absorb retries and network delays.
+    out_of_order_time_window: 10m
+
+# forseti: alert rules (ConfigMap prometheus-rules, live-reloaded by the Thanos sidecar)
+rule_files:
+  - /etc/prometheus/rules/*.yaml
+
+# forseti: Prometheus Alertmanager, as in production
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager.observability.svc.cluster.local:9093"]
+
+scrape_configs:
+  # forseti: self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+  - job_name: thanos-sidecar
+    static_configs:
+      - targets: ["127.0.0.1:10902"]
+
+  - job_name: thanos-query
+    static_configs:
+      - targets: ["thanos-query.observability.svc.cluster.local:10902"]
+
+  - job_name: alertmanager
+    static_configs:
+      - targets: ["alertmanager.observability.svc.cluster.local:9093"]
+
+  # forseti: Kubernetes object state (kube_pod_status_ready, restarts, ...)
+  - job_name: kube-state-metrics
+    honor_labels: true
+    static_configs:
+      - targets: ["kube-state-metrics.observability.svc.cluster.local:8080"]
+
+  # forseti: container CPU/memory (cAdvisor) through the API server node proxy,
+  # i.e. the series kube-prometheus style rules use
+  # (container_cpu_usage_seconds_total, container_memory_working_set_bytes).
+  - job_name: kubernetes-cadvisor
+    scheme: https
+    authorization:
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+      - source_labels: [__meta_kubernetes_node_name]
+        target_label: node
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: container_(cpu_usage_seconds_total|cpu_cfs_periods_total|cpu_cfs_throttled_periods_total|memory_working_set_bytes|memory_rss|spec_memory_limit_bytes|spec_cpu_quota|spec_cpu_period|oom_events_total|network_receive_bytes_total|network_transmit_bytes_total)
+        action: keep

@@ -1,0 +1,40 @@
+# Alertmanager config mimicking a typical production routing setup:
+#   - alerts labelled scom="true" go to the legacy SCOM bridge ("scom-legacy")
+#     AND continue to Forseti;
+#   - every alert goes to Forseti ("forseti").
+#
+# Note on `continue`: when a child route matches, the parent's receiver is NOT
+# used. So the catch-all forseti route below must be an explicit second child;
+# relying on the root receiver would silently drop scom alerts from Forseti.
+# Verify with: amtool config routes test --config.file=... scom=true alertname=X
+#
+# Until the Forseti intake exists (wave 2), both receivers point at in-cluster
+# echo sinks that log every payload (see webhook-sinks.yaml).
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: forseti
+  # Short timings for testing; production values are usually longer.
+  group_by: [alertname, namespace, service]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 15m
+  routes:
+    - receiver: scom-legacy
+      matchers:
+        - scom="true"
+      continue: true
+    - receiver: forseti
+
+receivers:
+  - name: forseti
+    webhook_configs:
+      - url: http://sink-forseti.observability.svc.cluster.local:8080/alerts
+        send_resolved: true
+  - name: scom-legacy
+    webhook_configs:
+      - url: http://sink-scom-legacy.observability.svc.cluster.local:8080/alerts
+        send_resolved: true
+
+inhibit_rules: []
