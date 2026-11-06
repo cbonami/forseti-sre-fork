@@ -184,6 +184,13 @@ services:
       - ENABLED_SKILLS=${ENABLED_SKILLS:-}
       # Investigation timeout (seconds; default 600 = 10 minutes)
       - AGENT_TIMEOUT_SECONDS=${AGENT_TIMEOUT_SECONDS:-600}
+      # Global cap on concurrently executing investigations (all sources).
+      # Manual runs queue for a slot; trigger_source "alert" gets HTTP 429.
+      - MAX_CONCURRENT_INVESTIGATIONS=${MAX_CONCURRENT_INVESTIGATIONS:-4}
+      # Close idle per-thread SDK sessions after N seconds (0 disables).
+      - SESSION_IDLE_TTL_SECONDS=${SESSION_IDLE_TTL_SECONDS:-1800}
+      # Shared bearer secret for POST/GET /investigations (empty = open, dev only).
+      - AGENT_INTERNAL_TOKEN=${AGENT_INTERNAL_TOKEN:-}
       # Durable session store for SDK conversation resume (persistent volume).
       - CLAUDE_CONFIG_DIR=/data/agent-sessions
       # LLM models — direct Anthropic vars from .env
