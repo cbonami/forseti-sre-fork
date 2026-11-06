@@ -6,7 +6,7 @@
 # Secrets: Use ${ENV_VAR} syntax to reference environment variables from .env
 # Example: api_key: ${ANTHROPIC_API_KEY}
 #
-# When you configure integrations via Slack or the Web UI, this file will be
+# When you configure integrations via the Web UI, this file will be
 # automatically updated to reflect your changes.
 
 # Organization and Team

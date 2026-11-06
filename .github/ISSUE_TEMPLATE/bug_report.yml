@@ -25,7 +25,7 @@ body:
         What actually happened (include error messages, stack traces, logs).
 
         ## Deployment type
-        (Docker Compose / Kubernetes / Managed / Slack / Other)
+        (Docker Compose / Kubernetes / Managed / Other)
 
         ## Environment
         - OpenSRE version:

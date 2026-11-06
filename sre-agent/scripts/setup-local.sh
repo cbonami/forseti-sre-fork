@@ -167,8 +167,6 @@ kubectl create secret generic opensre-secrets \
     --from-literal=github-webhook-secret="${GITHUB_WEBHOOK_SECRET:-}" \
     --from-literal=github-installation-id="${GITHUB_INSTALLATION_ID:-}" \
     --from-literal=github-repository="${GITHUB_REPOSITORY:-}" \
-    --from-literal=slack-bot-token="${SLACK_BOT_TOKEN:-}" \
-    --from-literal=slack-default-channel="${SLACK_DEFAULT_CHANNEL:-}" \
     --from-literal=pagerduty-api-key="${PAGERDUTY_API_KEY:-}" \
     --from-literal=aws-access-key-id="${AWS_ACCESS_KEY_ID:-}" \
     --from-literal=aws-secret-access-key="${AWS_SECRET_ACCESS_KEY:-}" \

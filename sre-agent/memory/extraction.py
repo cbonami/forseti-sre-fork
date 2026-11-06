@@ -228,7 +228,7 @@ class Extraction:
 
 
 _EXTRACT_PROMPT = """You are summarizing an SRE investigation into a compact JSON record.
-The investigation may be an alert, a Slack question, a pipeline/deploy failure, or any infra issue.
+The investigation may be an alert, a chat question, a pipeline/deploy failure, or any infra issue.
 
 {prior_block}Investigation request:
 {prompt}

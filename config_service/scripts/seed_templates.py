@@ -25,19 +25,19 @@ from src.db.session import get_session_maker
 TEMPLATE_METADATA = {
     "01_slack_incident_triage.json": {
         "icon_url": "https://cdn.opensre.ai/icons/incident-triage.svg",
-        "detailed_description": """# Slack Incident Triage
+        "detailed_description": """# Incident Triage
 
-Fast root cause analysis optimized for production incidents triggered via Slack.
+Fast root cause analysis optimized for production incidents triggered from Teams or the web console.
 
 ## What It Does
-- Correlates logs, metrics, and events across Kubernetes and AWS
+- Correlates logs, metrics, and events across Kubernetes
 - Identifies deployment regressions and resource issues
 - Provides actionable remediation steps
-- Posts real-time updates to Slack with Block Kit UI
+- Streams real-time updates to Teams and the web console
 
 ## Best For
 - 24/7 on-call teams
-- Kubernetes + AWS infrastructure
+- Kubernetes infrastructure
 - High-velocity deployment environments
 
 ## Example Scenarios
@@ -285,7 +285,6 @@ def derive_integrations_from_tools(tools: set) -> list:
         "aws": "AWS",
         "github": "GitHub",
         "gitlab": "GitLab",
-        "slack": "Slack",
         "pagerduty": "PagerDuty",
         "opsgenie": "Opsgenie",
         "incidentio": "Incident.io",
@@ -330,7 +329,6 @@ def derive_integrations_from_tools(tools: set) -> list:
 
     # Sort for consistent display order (most relevant first)
     priority_order = [
-        "Slack",
         "GitHub",
         "Kubernetes",
         "AWS",

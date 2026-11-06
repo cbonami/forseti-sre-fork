@@ -12,7 +12,6 @@ Automated end-to-end testing for OpenSRE.
 ./e2e_test_all.sh
 
 # Run specific tests
-./e2e_test_all.sh slack           # Slack integration only
 ./e2e_test_all.sh otel cart       # Cart service fault only
 ./e2e_test_all.sh otel all        # All fault injection tests
 ```
@@ -28,17 +27,6 @@ Fast infrastructure validation without secrets.
 - ✅ External secrets sync
 - ✅ HTTPS endpoints
 - ✅ otel-demo availability
-
-### `e2e_test_slack.py`
-Full Slack integration test:
-1. Posts a test message to Slack channel
-2. Waits for agent response
-3. Validates response in thread
-4. Checks server-side logs
-
-**Requirements:**
-- `SLACK_BOT_TOKEN` in AWS Secrets Manager (`opensre/prod/slack_bot_token`)
-- Slack channel ID configured
 
 ### `e2e_test_otel_demo.py`
 Fault injection testing:
@@ -100,7 +88,6 @@ After loading, runs a quick verification query and prints a sample blast radius 
 |----------|---------|-------------|
 | `AWS_PROFILE` | `playground` | AWS profile for secrets |
 | `AWS_REGION` | `us-west-2` | AWS region |
-| `SLACK_CHANNEL_ID` | `C0A43KYJE03` | Slack channel for testing |
 | `AGENT_NAMESPACE` | `opensre` | K8s namespace for OpenSRE |
 | `OTEL_NAMESPACE` | `otel-demo` | K8s namespace for otel-demo |
 | `WEB_UI_URL` | `https://ui.opensre.ai` | Web UI base URL |

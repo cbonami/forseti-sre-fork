@@ -7,7 +7,7 @@
 # Field guide
 #   name              Stable id. Used as the Langfuse dataset item id, so editing
 #                     an entry updates that item instead of creating a duplicate.
-#   input.prompt      Exactly what a responder would type into Slack / the console.
+#   input.prompt      Exactly what a responder would type into Teams / the console.
 #   expected_output   Reference answer for the LLM judge. Prose, not keywords —
 #                     the judge compares meaning, so a correct investigation
 #                     phrased differently still scores well.

@@ -19,7 +19,7 @@ Sandbox Server - Runs inside the sandbox container on port 8888
 This server exposes endpoints for executing and interrupting investigations.
 It maintains persistent ClaudeSDKClient sessions per thread_id to enable interrupts.
 
-Streams structured events via SSE (Server-Sent Events) for slack-bot consumption.
+Streams structured events via SSE (Server-Sent Events) for client consumption (web UI, teams-bot).
 """
 
 import asyncio

@@ -204,15 +204,14 @@ export default function SettingsPage() {
   }>({ default_destinations: [], trigger_overrides: {} });
   const [outputConfigLoading, setOutputConfigLoading] = useState(false);
   const [showAddDestination, setShowAddDestination] = useState(false);
-  const [newDestinationType, setNewDestinationType] = useState('slack');
-  const [newDestinationConfig, setNewDestinationConfig] = useState({ channel_name: '', channel_id: '' });
+  const [newDestinationType, setNewDestinationType] = useState('github');
 
   // Feature configs (AI Pipeline & Dependency Discovery)
   const [pipelineConfig, setPipelineConfig] = useState<PipelineConfig>({
     enabled: false,
     schedule: '0 2 * * *',
     ingestors: {
-      slack: { enabled: true, channels: [] },
+      slack: { enabled: false, channels: [] },
       confluence: { enabled: false, base_url: '', space_keys: [] },
       gdocs: { enabled: false, folder_ids: [] },
       agent_traces: { enabled: false },
@@ -350,16 +349,11 @@ export default function SettingsPage() {
   // Add destination
   const addDestination = () => {
     const newDest: any = { type: newDestinationType };
-    if (newDestinationType === 'slack') {
-      newDest.channel_id = newDestinationConfig.channel_id;
-      newDest.channel_name = newDestinationConfig.channel_name;
-    }
     setOutputConfig({
       ...outputConfig,
       default_destinations: [...outputConfig.default_destinations, newDest],
     });
     setShowAddDestination(false);
-    setNewDestinationConfig({ channel_name: '', channel_id: '' });
   };
 
   // Remove destination
@@ -412,7 +406,7 @@ export default function SettingsPage() {
               schedule: config.ai_pipeline.schedule ?? '0 2 * * *',
               ingestors: {
                 slack: {
-                  enabled: parseIngestor('slack', true).enabled ?? true,
+                  enabled: parseIngestor('slack', false).enabled ?? false,
                   channels: ingestors.slack?.channels || [],
                 },
                 confluence: {
@@ -738,7 +732,7 @@ export default function SettingsPage() {
                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-1">
                       Webhook Routing
                       <HelpTip id="webhook-routing" position="right">
-                        <strong>Webhook Routing</strong> determines which incoming webhooks are directed to your team. Configure identifiers from your integrations (Slack channels, GitHub repos, PagerDuty services, etc.) so that alerts and events from those sources are routed to your team's agent.
+                        <strong>Webhook Routing</strong> determines which incoming webhooks are directed to your team. Configure identifiers from your integrations (GitHub repos, PagerDuty services, etc.) so that alerts and events from those sources are routed to your team's agent.
                       </HelpTip>
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">
@@ -753,7 +747,7 @@ export default function SettingsPage() {
                     <Info className="w-5 h-5 text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-slate-600 dark:text-slate-300">
                       <p className="font-medium mb-1">How routing works:</p>
-                      <p>When a webhook arrives from Slack, GitHub, PagerDuty, or other integrations, the system checks these identifiers to determine which team should handle the event. Add all the IDs and names that belong to your team.</p>
+                      <p>When a webhook arrives from GitHub, PagerDuty, or other integrations, the system checks these identifiers to determine which team should handle the event. Add all the IDs and names that belong to your team.</p>
                     </div>
                   </div>
                 </div>
@@ -774,7 +768,6 @@ export default function SettingsPage() {
                             onChange={(e) => setEditingRoutingField(e.target.value as keyof RoutingConfig)}
                             className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                           >
-                            <option value="slack_channel_ids">Slack Channel ID</option>
                             <option value="github_repos">GitHub Repository</option>
                             <option value="pagerduty_service_ids">PagerDuty Service ID</option>
                             <option value="incidentio_team_ids">Incident.io Team ID</option>
@@ -787,7 +780,6 @@ export default function SettingsPage() {
                             value={newRoutingValue}
                             onChange={(e) => setNewRoutingValue(e.target.value)}
                             placeholder={
-                              editingRoutingField === 'slack_channel_ids' ? 'C0A4967KRBM' :
                               editingRoutingField === 'github_repos' ? 'owner/repo' :
                               editingRoutingField === 'pagerduty_service_ids' ? 'PXXXXXX' :
                               editingRoutingField === 'incidentio_team_ids' ? '01KCSZ7FHG...' :
@@ -817,7 +809,7 @@ export default function SettingsPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setEditingRoutingField('slack_channel_ids')}
+                        onClick={() => setEditingRoutingField('github_repos')}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-600 transition-colors"
                       >
                         <Plus className="w-4 h-4" />
@@ -828,7 +820,6 @@ export default function SettingsPage() {
                     {/* Configured Routes List */}
                     {(() => {
                       const allRoutes: { type: keyof RoutingConfig; label: string; value: string }[] = [];
-                      routingConfig.slack_channel_ids.forEach(v => allRoutes.push({ type: 'slack_channel_ids', label: 'Slack', value: v }));
                       routingConfig.github_repos.forEach(v => allRoutes.push({ type: 'github_repos', label: 'GitHub', value: v }));
                       routingConfig.pagerduty_service_ids.forEach(v => allRoutes.push({ type: 'pagerduty_service_ids', label: 'PagerDuty', value: v }));
                       routingConfig.incidentio_team_ids.forEach(v => allRoutes.push({ type: 'incidentio_team_ids', label: 'Incident.io Team', value: v }));
@@ -910,7 +901,7 @@ export default function SettingsPage() {
                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-1">
                       Output Destinations
                       <HelpTip id="output-destinations" position="right">
-                        <strong>Output Destinations</strong> control where agent investigation results are posted. You can set default destinations (like a Slack channel) and override behavior based on how the agent was triggered.
+                        <strong>Output Destinations</strong> control where agent investigation results are posted. You can set default destinations (like a GitHub repository) and override behavior based on how the agent was triggered.
                       </HelpTip>
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">
@@ -944,11 +935,6 @@ export default function SettingsPage() {
                               <div className="px-2 py-1 bg-emerald-100/55 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded">
                                 {dest.type}
                               </div>
-                              {dest.type === 'slack' && (
-                                <span className="text-sm text-slate-700 dark:text-slate-300">
-                                  {dest.channel_name || dest.channel_id || 'Unknown channel'}
-                                </span>
-                              )}
                               {dest.type === 'github' && (
                                 <span className="text-sm text-slate-700 dark:text-slate-300">
                                   {dest.repo || 'Unknown repo'}
@@ -985,62 +971,22 @@ export default function SettingsPage() {
                             onChange={(e) => setNewDestinationType(e.target.value)}
                             className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
                           >
-                            <option value="slack">Slack</option>
                             <option value="github">GitHub</option>
+                            <option value="teams">Microsoft Teams</option>
                             <option value="pagerduty">PagerDuty</option>
                           </select>
                         </div>
 
-                        {newDestinationType === 'slack' && (
-                          <>
-                            <div>
-                              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                                Channel Name
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="#incidents"
-                                value={newDestinationConfig.channel_name}
-                                onChange={(e) =>
-                                  setNewDestinationConfig({ ...newDestinationConfig, channel_name: e.target.value })
-                                }
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                                Channel ID
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="C1234567890"
-                                value={newDestinationConfig.channel_id}
-                                onChange={(e) =>
-                                  setNewDestinationConfig({ ...newDestinationConfig, channel_id: e.target.value })
-                                }
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
-                              />
-                            </div>
-                          </>
-                        )}
-
                         <div className="flex gap-2">
                           <button
                             onClick={addDestination}
-                            disabled={
-                              newDestinationType === 'slack' &&
-                              (!newDestinationConfig.channel_id || !newDestinationConfig.channel_name)
-                            }
                             className="flex items-center gap-2 px-3 py-2 text-sm bg-emerald-100/50 text-emerald-700 rounded-lg hover:bg-emerald-100/80 disabled:opacity-50"
                           >
                             <Check className="w-4 h-4" />
                             Add
                           </button>
                           <button
-                            onClick={() => {
-                              setShowAddDestination(false);
-                              setNewDestinationConfig({ channel_name: '', channel_id: '' });
-                            }}
+                            onClick={() => setShowAddDestination(false)}
                             className="px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
                           >
                             Cancel
@@ -1063,16 +1009,16 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between py-2">
                         <div>
                           <div className="text-sm font-medium text-slate-900 dark:text-white">
-                            When triggered from Slack
+                            When triggered from Teams
                           </div>
                           <div className="text-xs text-slate-500">Choose where to post results</div>
                         </div>
                         <select
-                          value={outputConfig.trigger_overrides.slack || 'reply_in_thread'}
+                          value={outputConfig.trigger_overrides.teams || 'reply_in_thread'}
                           onChange={(e) =>
                             setOutputConfig({
                               ...outputConfig,
-                              trigger_overrides: { ...outputConfig.trigger_overrides, slack: e.target.value },
+                              trigger_overrides: { ...outputConfig.trigger_overrides, teams: e.target.value },
                             })
                           }
                           className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
@@ -1217,7 +1163,7 @@ export default function SettingsPage() {
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-1">
                         AI Pipeline
                         <HelpTip id="ai-pipeline" position="right">
-                          <strong>AI Pipeline</strong> automatically processes your incident data (Slack discussions, Confluence runbooks, Google Docs) on a schedule and extracts learnings to build your Knowledge Base. This enables agents to reference past incidents and solutions.
+                          <strong>AI Pipeline</strong> automatically processes your incident data (Confluence runbooks, Google Docs) on a schedule and extracts learnings to build your Knowledge Base. This enables agents to reference past incidents and solutions.
                         </HelpTip>
                       </h2>
                       <p className="text-sm text-slate-500">
@@ -1264,69 +1210,6 @@ export default function SettingsPage() {
                     <div className="space-y-4">
                       <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         Data Sources
-                      </div>
-
-                      {/* Slack Ingestor */}
-                      <div className={`p-4 rounded-lg border ${
-                        pipelineConfig.ingestors.slack.enabled
-                          ? 'border-slate-400 bg-slate-50 dark:bg-slate-700/50'
-                          : 'border-slate-200 dark:border-slate-600'
-                      }`}>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={pipelineConfig.ingestors.slack.enabled}
-                            onChange={(e) =>
-                              setPipelineConfig({
-                                ...pipelineConfig,
-                                ingestors: {
-                                  ...pipelineConfig.ingestors,
-                                  slack: { ...pipelineConfig.ingestors.slack, enabled: e.target.checked },
-                                },
-                              })
-                            }
-                            className="sr-only"
-                          />
-                          <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center ${
-                              pipelineConfig.ingestors.slack.enabled
-                                ? 'bg-slate-600 border-slate-600'
-                                : 'border-slate-300 dark:border-slate-600'
-                            }`}
-                          >
-                            {pipelineConfig.ingestors.slack.enabled && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-slate-900 dark:text-white">Slack</div>
-                            <div className="text-xs text-slate-500">Incident discussions & resolutions</div>
-                          </div>
-                        </label>
-                        {pipelineConfig.ingestors.slack.enabled && (
-                          <div className="mt-3 pl-7">
-                            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                              Channels to monitor (comma-separated)
-                            </label>
-                            <input
-                              type="text"
-                              value={pipelineConfig.ingestors.slack.channels.join(', ')}
-                              onChange={(e) =>
-                                setPipelineConfig({
-                                  ...pipelineConfig,
-                                  ingestors: {
-                                    ...pipelineConfig.ingestors,
-                                    slack: {
-                                      ...pipelineConfig.ingestors.slack,
-                                      channels: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                                    },
-                                  },
-                                })
-                              }
-                              placeholder="#incidents, #oncall, #postmortems"
-                              className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700"
-                            />
-                            <p className="text-xs text-slate-400 mt-1">Leave empty to monitor all bot-accessible channels</p>
-                          </div>
-                        )}
                       </div>
 
                       {/* Confluence Ingestor */}

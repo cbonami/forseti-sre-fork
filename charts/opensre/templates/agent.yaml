@@ -3,7 +3,7 @@
 # Agent - SRE investigation agent with sandbox isolation support
 # =============================================================================
 # In sandbox mode, this deployment acts as a "sandbox manager" that:
-# - Receives investigation requests from slack-bot
+# - Receives investigation requests from clients (web UI, teams-bot)
 # - Creates isolated sandbox pods for each investigation
 # - Sandboxes run the same image with default CMD (sandbox server)
 # - Sandboxes connect to credential-resolver for credentials
@@ -194,7 +194,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.externalSecrets.contract.jwtSecret.secretName | default "opensre-jwt-secret" }}
                   key: {{ .Values.externalSecrets.contract.jwtSecret.secretKey | default "JWT_SECRET" }}
-            # Service-to-service auth for /investigate (shared with slack-bot)
+            # Service-to-service auth for /investigate (shared with the bots)
             - name: INVESTIGATE_AUTH_TOKEN
               valueFrom:
                 secretKeyRef:

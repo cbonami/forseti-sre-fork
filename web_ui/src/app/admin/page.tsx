@@ -22,7 +22,6 @@ import {
   BarChart3,
   Zap,
   Cloud,
-  MessageSquare,
   Github,
   Code,
   RefreshCw,
@@ -152,7 +151,6 @@ export default function AdminHomePage() {
   // Helper to map integration names to icons
   const getIntegrationIcon = (name: string) => {
     const iconMap: Record<string, any> = {
-      slack: MessageSquare,
       openai: Zap,
       github: Github,
       kubernetes: Cloud,

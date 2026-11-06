@@ -20,12 +20,12 @@
 - Direct Anthropic by default; optional multi-provider LLM support via LiteLLM (OpenAI, Gemini, DeepSeek, Mistral, Ollama)
 - Claude Agent SDK orchestration (root investigator dispatches specialist subagents)
 - Web console with dashboard, agent runs, memory browser, config editor
-- Slack, Microsoft Teams, Google Chat integration
+- Microsoft Teams integration
 - Self-hosted, Apache 2.0 licensed
 
 ## Architecture
 
-Slack / Web UI / API → sre-agent (Claude Agent SDK orchestration) → Memory System (episodic) + 46 Skills (production tools) + Knowledge Graph (Neo4j)
+Teams / Web UI / API → sre-agent (Claude Agent SDK orchestration) → Memory System (episodic) + 22 Skills + Knowledge Graph (Neo4j)
 
 ## Quick Start
 

@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>OpenSRE — the memory-first AI SRE</strong><br />
-  Self-hosted · Episodic memory · Knowledge graph · Web console · Slack &amp; Teams<br />
+  Self-hosted · Episodic memory · Knowledge graph · Web console · Microsoft Teams<br />
   <sub>opensre.in — not affiliated with Tracer / opensre.com</sub>
 </p>
 
@@ -57,7 +57,7 @@ make dev
 
 Requires **Docker Desktop** (or equivalent) running. `make dev` creates the external data volumes if they are missing, then starts Postgres, config-service, Neo4j, sre-agent, and the web console. Migrations run automatically. Open **http://localhost:3002** and paste the admin token shown in the terminal to sign in. (LiteLLM is an optional `--profile litellm` add-on.)
 
-> **[Full setup guide](https://www.opensre.in/docs/quick-start)** · **[Entra SSO](https://www.opensre.in/docs/sso)** · **[Slack integration](https://www.opensre.in/docs/integrations)** · **[Configuration](https://www.opensre.in/docs/configuration)**
+> **[Full setup guide](https://www.opensre.in/docs/quick-start)** · **[Entra SSO](https://www.opensre.in/docs/sso)** · **[Configuration](https://www.opensre.in/docs/configuration)**
 
 ## Architecture
 
@@ -77,7 +77,6 @@ Requires **Docker Desktop** (or equivalent) running. `make dev` creates the exte
 | **Multi-provider LLM** | Direct Anthropic by default; optional LiteLLM for OpenAI, Gemini, and more |
 | **Web Console** | Investigations, memory hub, config editor |
 | **Entra SSO** | Sign in to the web console with Microsoft Entra ID (token login remains) |
-| **Slack Integration** | Investigate incidents directly from Slack (`make dev-slack`) |
 | **Teams Bot** | Investigate incidents from Microsoft Teams (`make dev-teams`) |
 
 **[→ See all features](https://www.opensre.in)** · **[Roadmap](https://www.opensre.in/docs)**
@@ -87,17 +86,12 @@ Requires **Docker Desktop** (or equivalent) running. `make dev` creates the exte
 | Command | What it does |
 |---------|-------------|
 | `make dev` | Start all services (Postgres, config, Neo4j, agent, web UI) |
-| `make dev-slack` | Start all services + Slack bot |
 | `make dev-teams` | Start all services + Microsoft Teams bot |
 | `make stop` | Stop all services |
 | `make status` | Show service health status |
 | `make logs` | Follow all service logs |
 | `make logs-agent` | Follow sre-agent logs only |
 | `make clean` | Remove containers, volumes, and images |
-
-### Slack integration
-
-[Create a Slack app](https://api.slack.com/apps?new_app=1), add `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` to `.env`, and run `make dev-slack`. [Full guide](https://www.opensre.in/docs/integrations).
 
 ### Microsoft Teams
 

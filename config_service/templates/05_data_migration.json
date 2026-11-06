@@ -129,12 +129,11 @@
   },
   "output_config": {
     "default_destinations": [
-      "slack",
+      "teams",
       "github"
     ],
     "formatting": {
-      "slack": {
-        "use_block_kit": true,
+      "teams": {
         "include_scripts": true,
         "include_validation_queries": true,
         "include_rollback_plan": true

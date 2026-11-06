@@ -5,7 +5,7 @@ OpenSRE Investigation Server
 Server that manages investigations in isolated K8s sandboxes.
 Uses Pattern 3: Hybrid Sessions - ephemeral sandboxes hydrated with history.
 
-Streams structured SSE events for slack-bot consumption.
+Streams structured SSE events for client consumption (web UI, teams-bot).
 
 File Proxy Pattern:
 - Slack bot sends file metadata (URL + auth) instead of base64 content
@@ -60,7 +60,7 @@ MAX_CONCURRENT_INVESTIGATIONS = int(os.getenv("MAX_CONCURRENT_INVESTIGATIONS", "
 _investigation_semaphore = asyncio.Semaphore(MAX_CONCURRENT_INVESTIGATIONS)
 
 # Service-to-service auth for /investigate and /interrupt.
-# In production, set via K8s Secret (shared between slack-bot, orchestrator, and sre-agent).
+# In production, set via K8s Secret (shared between the bots, orchestrator, and sre-agent).
 # If unset, auth is disabled (local dev with `make dev`).
 INVESTIGATE_AUTH_TOKEN = os.getenv("INVESTIGATE_AUTH_TOKEN", "")
 if INVESTIGATE_AUTH_TOKEN:
@@ -74,7 +74,7 @@ else:
 def require_service_auth(request: Request) -> None:
     """Verify service-to-service auth token on /investigate and /interrupt.
 
-    In production, only slack-bot and orchestrator should call these endpoints.
+    In production, only the bots and orchestrator should call these endpoints.
     The token prevents any compromised pod from forging tenant context
     and hijacking credential-proxy.
 
@@ -537,7 +537,7 @@ def create_investigation_stream(
     """
 
     def stream():
-        # Don't emit sandbox status to Slack - it's an implementation detail
+        # Don't emit sandbox status to clients - it's an implementation detail
         # The actual agent thoughts will come from the sandbox
 
         try:
@@ -824,7 +824,7 @@ async def interrupt(request: InterruptRequest, raw_request: Request):
     print(f"🛑 Interrupting sandbox {sandbox_info.name} for thread {request.thread_id}")
 
     def stream():
-        # Don't emit status to Slack - actual interrupt events come from sandbox
+        # Don't emit status to clients - actual interrupt events come from sandbox
         try:
             # Interrupt (no new prompt) - returns streaming SSE response
             response = sandbox_manager.interrupt_sandbox(sandbox_info)
@@ -852,7 +852,7 @@ async def interrupt(request: InterruptRequest, raw_request: Request):
 @app.post("/answer", dependencies=[Depends(require_service_auth)])
 async def answer_question(request: AnswerRequest):
     """
-    Receive answer to AskUserQuestion from Slack bot.
+    Receive answer to AskUserQuestion from a chat bot.
     Forwards the answer to the sandbox where the agent is waiting.
     """
     thread_id = request.thread_id

@@ -6,8 +6,7 @@ version: '3.8'
 #
 # Services:
 #   Core: postgres, config-service, neo4j, sre-agent, web-ui
-#   Optional: slack-bot (--profile slack / make dev-slack)
-#             teams-bot (--profile teams / make dev-teams)
+#   Optional: teams-bot (--profile teams / make dev-teams)
 #             litellm (--profile litellm)
 #
 # Usage:
@@ -314,48 +313,6 @@ services:
     networks:
       - app_network
       - default
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Slack Bot — connects Slack to SRE Agent
-  # Opt-in: docker compose --profile slack up  /  make dev-slack
-  # Will exit gracefully if SLACK_BOT_TOKEN and SLACK_APP_TOKEN are not configured
-  # ─────────────────────────────────────────────────────────────────────────────
-  slack-bot:
-    build:
-      context: ./slack-bot
-      dockerfile: Dockerfile
-    container_name: opensre-slack-bot
-    profiles: ["slack"]
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - SRE_AGENT_URL=http://sre-agent:8000
-      - CONFIG_SERVICE_URL=http://config-service:8080
-      - CONFIG_MODE=${CONFIG_MODE:-}
-    depends_on:
-      - sre-agent
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    # Cannot use read_only because app may write logs/temp files
-    tmpfs:
-      - /tmp:rw,noexec,nosuid,size=100m
-    volumes:
-      # Mount assets read-only
-      - ./slack-bot/assets:/app/assets:ro
-    mem_limit: 1g
-    cpus: 1
-    pids_limit: 50
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - app_network
-      - default  # Needs external access to connect to Slack
 
   # Teams Bot — Microsoft Teams SDK → sre-agent
   # Opt-in: docker compose --profile teams up  /  make dev-teams

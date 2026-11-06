@@ -64,7 +64,7 @@
   "output_config": {
     "default_destinations": [
       "github",
-      "slack"
+      "teams"
     ],
     "formatting": {
       "github": {
@@ -72,8 +72,7 @@
         "include_code_snippets": true,
         "include_suggestions": true
       },
-      "slack": {
-        "use_block_kit": false,
+      "teams": {
         "use_markdown": true,
         "include_links": true
       }

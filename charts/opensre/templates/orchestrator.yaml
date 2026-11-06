@@ -78,20 +78,6 @@ spec:
                   name: {{ .Values.externalSecrets.contract.orchestratorInternal.secretName | quote }}
                   key: {{ .Values.externalSecrets.contract.orchestratorInternal.internalTokenKey | quote }}
             {{- end }}
-            {{- if .Values.externalSecrets.contract.slack.enabled }}
-            # DEPRECATED: Signing secret loaded from slack_apps DB table.
-            # Kept as fallback when no apps are configured in config service.
-            - name: SLACK_BOT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.slack.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.slack.botTokenKey | quote }}
-            - name: SLACK_SIGNING_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.slack.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.slack.signingSecretKey | quote }}
-            {{- end }}
             {{- if .Values.externalSecrets.contract.github.enabled }}
             - name: GITHUB_WEBHOOK_SECRET
               valueFrom:
@@ -171,11 +157,6 @@ spec:
             - name: VERCEL_VERIFY
               value: {{ .Values.vercelVerify | default "" | quote }}
             {{- end }}
-            # Slack-triggered agent run parameters (enterprise defaults)
-            - name: ORCHESTRATOR_SLACK_AGENT_MAX_TURNS
-              value: {{ default 50 .Values.services.orchestrator.slack.agentMaxTurns | quote }}
-            - name: ORCHESTRATOR_SLACK_AGENT_TIMEOUT_SECONDS
-              value: {{ default 180 .Values.services.orchestrator.slack.agentTimeoutSeconds | quote }}
             # K8s namespace for CronJobs and dedicated deployments
             - name: K8S_NAMESPACE
               value: {{ .Values.namespace | quote }}

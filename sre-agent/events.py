@@ -2,7 +2,7 @@
 """
 Stream Event Protocol
 
-Defines structured events for communication between sre-agent and slack-bot.
+Defines structured events for communication between sre-agent and its clients (web UI, teams-bot).
 Events are streamed as SSE (Server-Sent Events) with JSON payloads.
 """
 

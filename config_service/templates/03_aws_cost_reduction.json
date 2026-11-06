@@ -62,11 +62,10 @@
   },
   "output_config": {
     "default_destinations": [
-      "slack"
+      "teams"
     ],
     "formatting": {
-      "slack": {
-        "use_block_kit": true,
+      "teams": {
         "include_cost_charts": true,
         "group_by_priority": true
       }

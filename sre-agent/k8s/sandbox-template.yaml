@@ -190,18 +190,6 @@ spec:
               name: opensre-secrets
               key: github-repository
               optional: true
-        - name: SLACK_BOT_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: slack-bot-token
-              optional: true
-        - name: SLACK_DEFAULT_CHANNEL
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: slack-default-channel
-              optional: true
         - name: PAGERDUTY_API_KEY
           valueFrom:
             secretKeyRef:

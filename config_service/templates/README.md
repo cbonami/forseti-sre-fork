@@ -13,15 +13,15 @@ Templates are pre-configured multi-agent systems optimized for specific use case
 
 ## Available Templates
 
-### 1. 🚨 Slack Incident Triage
+### 1. 🚨 Incident Triage
 **File**: `01_slack_incident_triage.json`
 **Category**: incident-response
-**Agents**: Planner, GitHub, AWS, Metrics, Log Analysis, Coding, Writeup, Kubernetes
+**Agents**: Planner, GitHub, Metrics, Log Analysis, Coding, Writeup, Kubernetes
 
-Fast root cause analysis for production incidents triggered via Slack. Correlates logs, metrics, and events across Kubernetes and AWS infrastructure.
+Fast root cause analysis for production incidents triggered from Teams or the web console. Correlates logs, metrics, and events across Kubernetes.
 
-**Required MCPs**: kubernetes, slack
-**Optional MCPs**: grafana, datadog, aws_eks
+**Required MCPs**: kubernetes
+**Optional MCPs**: grafana
 
 **Use Cases**:
 - Pod crash loops and OOMKilled errors
@@ -242,7 +242,7 @@ Each template JSON follows this structure:
   },
 
   "output_config": {
-    "default_destinations": ["slack"],
+    "default_destinations": ["teams"],
     "formatting": { ... }
   }
 }

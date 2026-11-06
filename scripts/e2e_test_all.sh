@@ -3,12 +3,10 @@
 # OpenSRE E2E Test Suite
 # 
 # Runs comprehensive end-to-end tests for:
-# 1. Slack integration
-# 2. otel-demo fault injection
+# 1. otel-demo fault injection
 #
 # Usage:
 #   ./e2e_test_all.sh              # Run all tests
-#   ./e2e_test_all.sh slack        # Run only Slack tests
 #   ./e2e_test_all.sh otel         # Run only otel-demo tests
 #   ./e2e_test_all.sh otel cart    # Run specific fault test
 #
@@ -88,13 +86,6 @@ pip3 install -q requests > /dev/null 2>&1 || true
 TEST_TYPE=${1:-all}
 FAULT_TYPE=${2:-cart}
 
-run_slack_test() {
-    echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BLUE}Running Slack E2E Test${NC}"
-    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    python3 "$SCRIPT_DIR/e2e_test_slack.py"
-}
-
 run_otel_test() {
     echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BLUE}Running otel-demo Fault Injection Test${NC}"
@@ -103,19 +94,14 @@ run_otel_test() {
 }
 
 case $TEST_TYPE in
-    slack)
-        run_slack_test
-        ;;
     otel)
         run_otel_test
         ;;
     all)
-        run_slack_test
-        echo ""
         run_otel_test
         ;;
     *)
-        echo "Usage: $0 [slack|otel|all] [fault_type]"
+        echo "Usage: $0 [otel|all] [fault_type]"
         echo "Fault types: cart, product, recommendation, ad, all"
         exit 1
         ;;

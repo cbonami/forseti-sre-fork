@@ -19,9 +19,6 @@ ignore = [
 # Per-file ignores for rules that are globally enabled but have
 # legitimate exceptions in specific locations.
 [lint.per-file-ignores]
-# slack-bot: large legacy codebase — bare excepts and unused vars
-# will be cleaned up in a dedicated refactor PR.
-"slack-bot/*.py" = ["E722", "F841"]
 # config_service repository.py: deferred imports used only in type
 # annotations (from __future__ import annotations makes these safe).
 "config_service/src/db/repository.py" = ["F821"]

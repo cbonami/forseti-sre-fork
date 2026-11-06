@@ -48,7 +48,6 @@ The web console will be available at `http://localhost:3002`.
 
 Optional chat bots:
 - `make dev-teams` — Microsoft Teams bot (`teams-bot/`, port 3978)
-- `make dev-slack` — Slack bot (requires `slack-bot/` + Slack tokens)
 
 ## Key files
 

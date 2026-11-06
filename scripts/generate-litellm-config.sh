@@ -2,7 +2,7 @@
 # ═══════════════════════════════════════════════════════════════════════
 # Generate litellm_config.yaml from .env
 # ═══════════════════════════════════════════════════════════════════════
-# Called automatically by `make setup-llm` (via dev/dev-slack targets).
+# Called automatically by `make setup-llm` (via the dev/dev-teams targets).
 # Reads LLM_PROVIDER and LLM_MODEL from .env and writes the LiteLLM
 # proxy config when LLM_PROVIDER is nvidia or openrouter.
 # Skips generation for direct Anthropic (default) or unset LLM_PROVIDER.

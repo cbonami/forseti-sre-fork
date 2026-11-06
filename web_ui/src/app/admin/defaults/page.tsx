@@ -534,7 +534,7 @@ export default function OrgDefaultsPage() {
                       <input
                         value={newMcp.name}
                         onChange={(e) => setNewMcp({ ...newMcp, name: e.target.value })}
-                        placeholder="e.g. Slack, Datadog"
+                        placeholder="e.g. Grafana, GitHub"
                         className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-white dark:bg-stone-700"
                       />
                     </div>
@@ -545,7 +545,6 @@ export default function OrgDefaultsPage() {
                         onChange={(e) => setNewMcp({ ...newMcp, type: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-white dark:bg-stone-700"
                       >
-                        <option value="slack">Slack</option>
                         <option value="datadog">Datadog</option>
                         <option value="github">GitHub</option>
                         <option value="kubernetes">Kubernetes</option>
@@ -580,7 +579,7 @@ export default function OrgDefaultsPage() {
                         <input
                           value={newMcp.command || ''}
                           onChange={(e) => setNewMcp({ ...newMcp, command: e.target.value })}
-                          placeholder="e.g. npx mcp-server-slack"
+                          placeholder="e.g. npx mcp-server-grafana"
                           className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-white dark:bg-stone-700"
                         />
                       </div>

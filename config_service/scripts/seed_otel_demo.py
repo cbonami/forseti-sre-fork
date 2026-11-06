@@ -9,15 +9,11 @@ This updates:
    - Service dependency map
    - Detection PromQL queries
    - Custom planner prompt for SRE incident triage
-3. Output configuration pointing to the Slack channel
+3. Output configuration (default destination: Microsoft Teams)
 
 Usage:
     cd config_service
     poetry run python scripts/seed_otel_demo.py
-
-Environment variables:
-    OTEL_DEMO_SLACK_CHANNEL_ID: Slack channel ID (default from env)
-    OTEL_DEMO_SLACK_CHANNEL_NAME: Slack channel name
 """
 
 import sys
@@ -629,13 +625,9 @@ skill) to learn query methods and available scripts."""
 def main() -> None:
     load_dotenv()
 
-    slack_channel_id = os.getenv("OTEL_DEMO_SLACK_CHANNEL_ID", "C0A4967KRBM")
-    slack_channel_name = os.getenv("OTEL_DEMO_SLACK_CHANNEL_NAME", "#otel-demo")
-
     print("Seeding OTel Demo config into local/default team...")
     print(f"  Organization: {ORG_ID}")
     print(f"  Team: {TEAM_NODE_ID}")
-    print(f"  Slack channel: {slack_channel_id} ({slack_channel_name})")
 
     with db_session() as s:
         # 1. Check that local org exists (node_id is 'root' for the org node)
@@ -677,7 +669,6 @@ def main() -> None:
             "team_name": TEAM_NAME,
             "description": "AI SRE for OpenTelemetry Demo — incident triage, diagnosis, and remediation",
             "routing": {
-                "slack_channel_ids": [slack_channel_id],
                 "github_repos": [],
                 "pagerduty_service_ids": [],
                 "services": list(SERVICES.keys()),
@@ -770,28 +761,16 @@ def main() -> None:
                 TeamOutputConfig(
                     org_id=ORG_ID,
                     team_node_id=TEAM_NODE_ID,
-                    default_destinations=[
-                        {
-                            "type": "slack",
-                            "channel_id": slack_channel_id,
-                            "channel_name": slack_channel_name,
-                        }
-                    ],
+                    default_destinations=[{"type": "teams"}],
                     trigger_overrides={
-                        "slack": "reply_in_thread",
+                        "teams": "reply_in_thread",
                         "api": "use_default",
                     },
                 )
             )
         else:
             print("  Updating existing output configuration...")
-            output_cfg.default_destinations = [
-                {
-                    "type": "slack",
-                    "channel_id": slack_channel_id,
-                    "channel_name": slack_channel_name,
-                }
-            ]
+            output_cfg.default_destinations = [{"type": "teams"}]
 
         s.commit()
 
@@ -799,7 +778,6 @@ def main() -> None:
     print("\n" + "=" * 70)
     print("DEMO SETUP SUMMARY")
     print("=" * 70)
-    print(f"\nSlack Channel: {slack_channel_id} ({slack_channel_name})")
     print(f"\nServices: {len(SERVICES)} total")
     app_services = [
         k
@@ -813,7 +791,7 @@ def main() -> None:
         print(f"  - {name}: {info.get('url', info.get('repo', ''))}")
     print("\n" + "=" * 70)
     print("\nNext steps:")
-    print("  1. Route the #otel-demo Slack channel to this team")
+    print("  1. Route the Teams channel to this team")
     print(
         "  3. Configure integrations (Prometheus, Loki, Jaeger, Grafana, K8s) in the admin UI"
     )

@@ -69,11 +69,10 @@
   },
   "output_config": {
     "default_destinations": [
-      "slack"
+      "teams"
     ],
     "formatting": {
-      "slack": {
-        "use_block_kit": false,
+      "teams": {
         "use_markdown": true,
         "include_links": true
       }

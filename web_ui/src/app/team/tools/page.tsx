@@ -1631,7 +1631,7 @@ export default function TeamToolsPage() {
                   type="text"
                   value={newServerForm.name}
                   onChange={(e) => setNewServerForm({ ...newServerForm, name: e.target.value })}
-                  placeholder="e.g., Slack MCP"
+                  placeholder="e.g., Grafana MCP"
                   className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-slate-500 mt-1">A friendly name for this MCP server</p>
@@ -1645,7 +1645,7 @@ export default function TeamToolsPage() {
                   type="text"
                   value={newServerForm.description}
                   onChange={(e) => setNewServerForm({ ...newServerForm, description: e.target.value })}
-                  placeholder="e.g., Provides Slack channel and message management tools"
+                  placeholder="e.g., Provides Grafana dashboard and datasource tools"
                   className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-slate-500 mt-1">Brief description of what this MCP provides</p>
@@ -1672,7 +1672,7 @@ export default function TeamToolsPage() {
                 <textarea
                   value={newServerForm.args}
                   onChange={(e) => setNewServerForm({ ...newServerForm, args: e.target.value })}
-                  placeholder="One argument per line, e.g.:&#10;-m&#10;mcp_server_slack"
+                  placeholder="One argument per line, e.g.:&#10;-m&#10;mcp_server_grafana"
                   rows={4}
                   className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm font-mono"
                 />
@@ -1686,7 +1686,7 @@ export default function TeamToolsPage() {
                 <textarea
                   value={newServerForm.env}
                   onChange={(e) => setNewServerForm({ ...newServerForm, env: e.target.value })}
-                  placeholder="One variable per line in KEY=VALUE format, e.g.:&#10;SLACK_TOKEN=xoxb-your-token&#10;SLACK_TEAM_ID=T1234567"
+                  placeholder="One variable per line in KEY=VALUE format, e.g.:&#10;GRAFANA_URL=https://grafana.example.com&#10;GRAFANA_API_KEY=your-token"
                   rows={5}
                   className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm font-mono"
                 />

@@ -1,7 +1,7 @@
 # LiteLLM Proxy Configuration — Reference Example
 #
 # NOTE: You do NOT need to create litellm_config.yaml manually.
-# `make setup-llm` (run by dev/dev-slack) auto-generates it only when
+# `make setup-llm` (run by dev/dev-teams) auto-generates it only when
 # LLM_PROVIDER is nvidia or openrouter. Direct Anthropic skips generation.
 #
 # This file is kept as a reference for the config structure.

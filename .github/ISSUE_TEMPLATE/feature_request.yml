@@ -43,7 +43,7 @@ body:
       options:
         - Agent / AI capabilities
         - Integrations (observability, cloud, etc.)
-        - Slack bot / UI
+        - Teams bot / UI
         - Web console / dashboard
         - Alert correlation / anomaly detection
         - Knowledge base / RAPTOR

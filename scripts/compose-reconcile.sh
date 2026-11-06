@@ -19,7 +19,6 @@ CONTAINERS=(
   opensre-litellm
   opensre-sre-agent
   opensre-web-ui
-  opensre-slack-bot
   opensre-teams-bot
 )
 

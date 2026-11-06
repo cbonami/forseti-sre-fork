@@ -45,7 +45,7 @@ function GitHubSetupContent() {
 
         <div className="bg-forest-light/10 dark:bg-forest/20 rounded-lg p-4 mb-6">
           <p className="text-forest-dark dark:text-forest-light text-sm">
-            <strong>Next step:</strong> Return to Slack and enter{" "}
+            <strong>Next step:</strong> Return to the OpenSRE console and enter{" "}
             <code className="bg-forest-light/15 dark:bg-forest/20 px-1 rounded">
               {account || "your GitHub org name"}
             </code>{" "}
@@ -59,7 +59,7 @@ function GitHubSetupContent() {
 
         <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-600">
           <p className="text-xs text-stone-400 dark:text-stone-500">
-            You can close this window and return to Slack.
+            You can close this window and return to the OpenSRE console.
           </p>
         </div>
       </div>

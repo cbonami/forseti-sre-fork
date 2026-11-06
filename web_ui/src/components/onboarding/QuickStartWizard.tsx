@@ -10,7 +10,6 @@ import {
   Bot,
   GitBranch,
   MessageSquare,
-  Slack,
   Github,
   Bell,
   Settings,
@@ -209,7 +208,7 @@ function StepWelcome() {
         />
         <FeatureCard
           icon={<MessageSquare className="w-5 h-5" />}
-          title="Slack Native"
+          title="Teams Native"
           description="Results where you work"
         />
       </div>
@@ -298,8 +297,8 @@ function StepConnectSystems({ onNavigateAway }: { onNavigateAway: () => void }) 
 
       <div className="space-y-3">
         <IntegrationItem
-          icon={<Slack className="w-5 h-5" />}
-          name="Slack"
+          icon={<MessageSquare className="w-5 h-5" />}
+          name="Microsoft Teams"
           description="@opensre investigate checkout errors"
           badge="Primary"
           badgeColor="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
@@ -318,8 +317,7 @@ function StepConnectSystems({ onNavigateAway }: { onNavigateAway: () => void }) 
 
       <div className="bg-forest-light/10 dark:bg-forest/20 rounded-xl p-4 border border-forest-light/30 dark:border-forest/30">
         <p className="text-sm text-forest-dark dark:text-forest-light">
-          <strong>Tip:</strong> Start with Slack integration - it&apos;s the most common way teams use OpenSRE.
-          Once connected, just @mention the bot in any channel.
+          <strong>Tip:</strong> Start with the Teams integration, then just @mention the bot in any channel.
         </p>
       </div>
 
@@ -406,7 +404,7 @@ function StepTryItNow({ onNavigateAway }: { onNavigateAway: () => void }) {
           Try It Now
         </h2>
         <p className="text-stone-600 dark:text-stone-400">
-          Test the agent before deploying to Slack. Describe an incident and watch it investigate.
+          Test the agent before deploying to Teams. Describe an incident and watch it investigate.
         </p>
       </div>
 
@@ -542,7 +540,7 @@ function StepComplete() {
         <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
           <li className="flex items-start gap-2">
             <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-            <span>Trigger an investigation via Slack or webhook</span>
+            <span>Trigger an investigation via Teams or webhook</span>
           </li>
           <li className="flex items-start gap-2">
             <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />

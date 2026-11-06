@@ -5,12 +5,12 @@ OpenSRE is an AI SRE platform that investigates production incidents. A root inv
 ## System Overview
 
 ```
-     Web UI              Slack Bot              Teams Bot
-     (Next.js)         (Socket Mode)         (Microsoft Teams)
+     Web UI                                Teams Bot
+     (Next.js)                         (Microsoft Teams)
        :3002                                    :3978
-         \                  |                    /
-          \                 |                   /
-           v                v                  v
+         \                                      /
+          \                                    /
+            v                                   v
          ┌─────────────────────────────────────────┐
          │               sre-agent                 │
          │                 :8001                   │
@@ -29,13 +29,12 @@ OpenSRE is an AI SRE platform that investigates production incidents. A root inv
 **Entry points**
 
 - **Web UI** — admin console and investigation UI; streams SSE from sre-agent. Optional Microsoft Entra SSO via **Admin → SSO** (see [`docs/SSO_SETUP.md`](SSO_SETUP.md)).
-- **Slack bot** — Socket Mode; @mentions and threads; streams the same SSE protocol.
 - **Teams bot** — Microsoft Teams channels or DMs; streams the same SSE protocol.
 - **REST API** — `POST /investigate` and related thread endpoints on sre-agent (used by the clients above).
 
 ## Investigation Flow
 
-1. A user starts an investigation from the web console, Slack, Teams, or the REST API.
+1. A user starts an investigation from the web console, Teams, or the REST API.
 2. sre-agent creates or resumes a thread and opens an `InteractiveAgentSession` (Claude Agent SDK).
 3. The root agent (typically `investigator`) plans the work, loads skills on demand, and dispatches specialists via the SDK `Task` tool.
 4. After concrete symptoms are known (error text, failing service, stack trace), the agent may invoke `memory-search` and `infrastructure-neo4j` — there is no automatic pre-injection of past episodes or topology.
@@ -161,7 +160,6 @@ Web UI and sre-agent read merged config at investigation start. Audit logging re
 ```bash
 cp .env.example .env   # set ANTHROPIC_API_KEY
 make dev               # core stack
-make dev-slack         # core + Slack bot
 make dev-teams         # core + Teams bot
 ```
 
@@ -172,7 +170,6 @@ make dev-teams         # core + Teams bot
 | config-service | 8081 | Config, tokens, agent-run storage |
 | PostgreSQL | 5433 | Config DB + agent runs |
 | Neo4j Browser / Bolt | 7475 / 7688 | Memory + topology graph |
-| Slack bot | — | Optional (`--profile slack` / `make dev-slack`) |
 | Teams bot | 3978 | Optional (`--profile teams` / `make dev-teams`) |
 | LiteLLM | 4001 | Optional (`--profile litellm`) |
 
@@ -191,7 +188,6 @@ By default the agent calls Anthropic directly (`ANTHROPIC_API_KEY`). To use Open
 | `sre-agent/memory/` | Neo4j episode store, retrieval, extraction |
 | `sre-agent/config.py` | Team config loading, root/subagent resolution |
 | `web_ui/` | Next.js admin console and investigation UI |
-| `slack-bot/` | Slack bot (Socket Mode → sre-agent SSE) |
 | `teams-bot/` | Microsoft Teams bot (SSE client to sre-agent) |
 | `config_service/` | Hierarchical config API, skills catalog, Postgres persistence |
 
@@ -199,5 +195,4 @@ By default the agent calls Anthropic directly (`ANTHROPIC_API_KEY`). To use Open
 
 - `docs/MEMORY_SYSTEM.md` — episodic memory design (when present in your checkout)
 - `teams-bot/README.md` — Teams bot setup and Azure messaging endpoint
-- Slack: set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`, then `make dev-slack`
 - `.env.example` — required environment variables for self-hosting

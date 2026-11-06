@@ -76,10 +76,10 @@ from tool_output_sanitize import sanitize_tool_end_payload
 # Max image size to embed (5MB)
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
-# Max file size to share (1GB - Slack limit for all plans)
+# Max file size to share (1GB)
 MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
-# Max number of files to share per message (Slack best practice)
+# Max number of files to share per message
 MAX_FILES_PER_MESSAGE = 10
 
 
@@ -111,7 +111,7 @@ def _extract_images_from_text(text: str) -> tuple[str, list]:
 
     Returns:
         Tuple of (text_with_placeholders, images_list)
-        - text stays the same (slack-bot will replace based on path)
+        - text stays the same (clients will replace based on path)
         - images_list: [{path, data (base64), media_type, alt}, ...]
     """
     # Match markdown images: ![alt text](path)
@@ -211,7 +211,7 @@ def _extract_files_from_text(text: str) -> tuple[str, list]:
 
     Returns:
         Tuple of (text, files_list)
-        - text stays the same (slack-bot will replace based on path)
+        - text stays the same (clients will replace based on path)
         - files_list: [{path, data (base64), media_type, filename, description}, ...]
     """
     # Match markdown links: [text](path)
@@ -1110,7 +1110,7 @@ class InteractiveAgentSession:
                         "[AskUserQuestion] Timeout - continuing without answer"
                     )
 
-                    # Emit timeout event so Slack can update the UI
+                    # Emit timeout event so clients can update the UI
                     from events import question_timeout_event
 
                     if hasattr(self, "_pending_events"):

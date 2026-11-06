@@ -64,9 +64,6 @@ services:
   orchestrator:
     enabled: false
 
-  slackBot:
-    enabled: false
-
   teamsBot:
     enabled: false
     image: swapnildahiphale/opensre-teams-bot:v1.2.8

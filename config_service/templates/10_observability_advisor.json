@@ -87,12 +87,11 @@
   },
   "output_config": {
     "default_destinations": [
-      "slack",
+      "teams",
       "file"
     ],
     "formatting": {
-      "slack": {
-        "use_block_kit": true,
+      "teams": {
         "include_tables": true,
         "include_recommendations": true,
         "group_by_service": true

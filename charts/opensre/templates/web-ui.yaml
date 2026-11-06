@@ -94,23 +94,6 @@ spec:
             - name: WEB_UI_OIDC_CLIENT_SECRET
               value: {{ .Values.services.webUi.oidc.clientSecret.value | quote }}
             {{- end }}
-            {{- if and .Values.externalSecrets.enabled .Values.services.webUi.slack.enabled }}
-            - name: SLACK_SIGNING_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.slack.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.slack.signingSecretKey | quote }}
-            - name: SLACK_BOT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.slack.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.slack.botTokenKey | quote }}
-            - name: ORCHESTRATOR_INTERNAL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.orchestratorInternal.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.orchestratorInternal.internalTokenKey | quote }}
-            {{- end }}
           readinessProbe:
             httpGet:
               path: /

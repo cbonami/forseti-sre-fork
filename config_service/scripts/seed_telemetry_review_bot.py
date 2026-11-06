@@ -11,7 +11,7 @@ Creates:
 2. Team configuration with:
    - GitHub repo routing (triggers on PR webhooks)
    - Planner agent with telemetry-review system prompt
-3. Output configuration (PR comments + optional Slack)
+3. Output configuration (PR comments)
 
 Usage:
     cd config_service
@@ -23,8 +23,6 @@ Environment variables:
     TELEMETRY_BOT_ORG_ID: Customer org ID (required)
     TELEMETRY_BOT_GITHUB_REPO: GitHub repo to watch (required, format: owner/repo)
     TELEMETRY_BOT_TEAM_ID: Team node ID (default: telemetry-review-bot)
-    TELEMETRY_BOT_SLACK_CHANNEL_ID: Optional Slack channel for notifications
-    TELEMETRY_BOT_SLACK_CHANNEL_NAME: Optional Slack channel name
 """
 
 import sys
@@ -263,9 +261,6 @@ def main() -> None:
     team_node_id = os.getenv("TELEMETRY_BOT_TEAM_ID", "telemetry-review-bot")
     team_name = "Telemetry Review Bot"
 
-    slack_channel_id = os.getenv("TELEMETRY_BOT_SLACK_CHANNEL_ID")
-    slack_channel_name = os.getenv("TELEMETRY_BOT_SLACK_CHANNEL_NAME", "#telemetry-bot")
-
     if not org_id:
         print("ERROR: TELEMETRY_BOT_ORG_ID is required")
         print("  export TELEMETRY_BOT_ORG_ID=your-org-id")
@@ -280,8 +275,6 @@ def main() -> None:
     print(f"  Organization: {org_id}")
     print(f"  Team: {team_node_id}")
     print(f"  GitHub repo: {github_repo}")
-    if slack_channel_id:
-        print(f"  Slack channel: {slack_channel_id} ({slack_channel_name})")
 
     with db_session() as s:
         # 1. Check that org exists
@@ -328,7 +321,6 @@ def main() -> None:
             "team_name": team_name,
             "description": "Automated PR reviewer that suggests telemetry/analytics event tracking",
             "routing": {
-                "slack_channel_ids": [slack_channel_id] if slack_channel_id else [],
                 "github_repos": [github_repo],
                 "pagerduty_service_ids": [],
                 "services": [],
@@ -379,14 +371,6 @@ def main() -> None:
 
         # 4. Create/update output configuration
         default_destinations = []
-        if slack_channel_id:
-            default_destinations.append(
-                {
-                    "type": "slack",
-                    "channel_id": slack_channel_id,
-                    "channel_name": slack_channel_name,
-                }
-            )
 
         output_cfg = s.execute(
             select(TeamOutputConfig).where(
@@ -404,7 +388,6 @@ def main() -> None:
                     default_destinations=default_destinations,
                     trigger_overrides={
                         "github": "comment_on_pr",
-                        "slack": "reply_in_thread",
                         "api": "use_default",
                     },
                 )
@@ -421,8 +404,6 @@ def main() -> None:
     print("=" * 60)
     print(f"\nGitHub Repo: {github_repo}")
     print(f"Team: {team_node_id}")
-    if slack_channel_id:
-        print(f"Slack: {slack_channel_id} ({slack_channel_name})")
     print("\nHow it works:")
     print("  1. Developer opens a PR on the configured repo")
     print("  2. GitHub webhook fires → orchestrator routes to this team")

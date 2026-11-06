@@ -54,7 +54,7 @@ Security issues in:
 - **OpenSRE core** (agent, orchestrator, config-service)
 - **Web console** (authentication, authorization, XSS, CSRF)
 - **API endpoints** (injection, authentication bypass)
-- **Slack bot** (command injection, unauthorized access)
+- **Teams bot** (command injection, unauthorized access)
 - **Integrations** (credential leakage, SSRF)
 - **Deployment configs** (Kubernetes, Docker)
 - **Dependencies** (critical CVEs in direct dependencies)
