@@ -178,6 +178,9 @@ def result_event(
     subtype: Optional[str] = None,
     images: Optional[list] = None,
     files: Optional[list] = None,
+    usage: Optional[dict] = None,
+    total_cost_usd: Optional[float] = None,
+    model_usage: Optional[dict] = None,
 ) -> StreamEvent:
     """
     Create a final result event.
@@ -191,6 +194,12 @@ def result_event(
                 [{path: str, data: str (base64), media_type: str, alt: str}, ...]
         files: Optional list of extracted files:
                [{path: str, data: str (base64), media_type: str, filename: str, description: str, size: int}, ...]
+        usage: Optional token usage of this turn (SDK ResultMessage.usage keys,
+               snake_case: input_tokens, output_tokens, cache_*_input_tokens).
+        total_cost_usd: Optional USD cost of this turn.
+        model_usage: Optional per-model usage of this turn (SDK camelCase keys,
+                     includes subagent models).
+    Usage keys are only present when the SDK reported them (additive fields).
     """
     data = {
         "text": text,
@@ -201,6 +210,12 @@ def result_event(
         data["images"] = images
     if files:
         data["files"] = files
+    if usage is not None:
+        data["usage"] = usage
+    if total_cost_usd is not None:
+        data["total_cost_usd"] = total_cost_usd
+    if model_usage is not None:
+        data["model_usage"] = model_usage
     return StreamEvent(
         type="result",
         data=data,
@@ -275,6 +290,22 @@ def message_queued_event(thread_id: str, *, pending_count: int) -> StreamEvent:
     return StreamEvent(
         type="message_queued",
         data={"pending_count": pending_count},
+        thread_id=thread_id,
+    )
+
+
+def queued_event(
+    thread_id: str, *, position: int, active: int, limit: int
+) -> StreamEvent:
+    """Investigation is waiting for a global concurrency slot.
+
+    Emitted once, before ``run_started``, when MAX_CONCURRENT_INVESTIGATIONS
+    slots are all busy. ``position`` is 1-based among waiters. Clients that do
+    not know this type ignore it.
+    """
+    return StreamEvent(
+        type="queued",
+        data={"position": position, "active": active, "limit": limit},
         thread_id=thread_id,
     )
 

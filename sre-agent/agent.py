@@ -942,6 +942,134 @@ def capture_session_id_from_result(session_id: str | None, message) -> str | Non
     return from_msg or session_id
 
 
+# ---------------------------------------------------------------------------
+# Per-turn LLM usage / cost (SSE result event + agent_runs persistence)
+# ---------------------------------------------------------------------------
+# In streaming-input mode one CLI process serves every turn of a thread, and
+# ResultMessage.usage / total_cost_usd / model_usage are RUNNING TOTALS for
+# that process (verified in the bundled CLI of claude-agent-sdk 0.2.121:
+# usage is QueryEngine.totalUsage, cost is the process-wide totalCostUSD, and
+# modelUsage is the process-wide per-model map). A turn's own usage is
+# therefore the delta from the previous turn's snapshot, same approach as the
+# Langfuse watermarks above.
+
+# Token counters in ResultMessage.usage (snake_case).
+_USAGE_TOKEN_KEYS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_read_input_tokens",
+    "cache_creation_input_tokens",
+)
+# Cumulative counters inside each ResultMessage.model_usage entry (camelCase).
+# Non-cumulative fields (contextWindow, maxOutputTokens) are dropped.
+_MODEL_USAGE_KEYS = (
+    "inputTokens",
+    "outputTokens",
+    "cacheReadInputTokens",
+    "cacheCreationInputTokens",
+    "webSearchRequests",
+    "costUSD",
+)
+_MODEL_TO_USAGE_KEY = {
+    "inputTokens": "input_tokens",
+    "outputTokens": "output_tokens",
+    "cacheReadInputTokens": "cache_read_input_tokens",
+    "cacheCreationInputTokens": "cache_creation_input_tokens",
+}
+
+
+def _num(value):
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def snapshot_result_usage(message) -> dict | None:
+    """Cumulative usage/cost snapshot from a ResultMessage (None if absent)."""
+    if message is None:
+        return None
+    snap: dict = {"total_cost_usd": _num(getattr(message, "total_cost_usd", None))}
+    usage = getattr(message, "usage", None)
+    snap["usage"] = {}
+    if isinstance(usage, dict):
+        for key in _USAGE_TOKEN_KEYS:
+            v = _num(usage.get(key))
+            if v is not None:
+                snap["usage"][key] = v
+    snap["model_usage"] = {}
+    model_usage = getattr(message, "model_usage", None)
+    if isinstance(model_usage, dict):
+        for model, entry in model_usage.items():
+            if not isinstance(entry, dict):
+                continue
+            kept = {}
+            for key in _MODEL_USAGE_KEYS:
+                v = _num(entry.get(key))
+                if v is not None:
+                    kept[key] = v
+            if kept:
+                snap["model_usage"][str(model)] = kept
+    return snap
+
+
+def _delta(current, previous):
+    """Non-negative delta; a counter that went backwards is a reset (new base)."""
+    if current is None:
+        return None
+    if previous is None or current < previous:
+        return current
+    return current - previous
+
+
+def _int_or_float(value, key: str):
+    if value is None:
+        return None
+    return round(float(value), 8) if key in ("costUSD", "total_cost_usd") else int(value)
+
+
+def turn_usage_from_snapshots(current: dict | None, baseline: dict | None) -> dict | None:
+    """Usage of one turn: ``current`` minus ``baseline`` (both cumulative).
+
+    Returns ``{"total_cost_usd", "usage", "model_usage", "totals"}`` where
+    ``totals`` holds the four token counters for persistence. Totals come from
+    ``model_usage`` when present (it includes subagent tokens), else ``usage``.
+    """
+    if current is None:
+        return None
+    baseline = baseline or {}
+    cost = _delta(current.get("total_cost_usd"), baseline.get("total_cost_usd"))
+    base_usage = baseline.get("usage") or {}
+    usage = {
+        k: _int_or_float(_delta(v, base_usage.get(k)), k)
+        for k, v in (current.get("usage") or {}).items()
+    }
+    base_models = baseline.get("model_usage") or {}
+    model_usage: dict = {}
+    for model, entry in (current.get("model_usage") or {}).items():
+        prev = base_models.get(model) or {}
+        d = {k: _int_or_float(_delta(v, prev.get(k)), k) for k, v in entry.items()}
+        if any(v for v in d.values()):
+            model_usage[model] = d
+    if current.get("model_usage"):
+        totals = {k: 0 for k in _USAGE_TOKEN_KEYS}
+        for entry in model_usage.values():
+            for mkey, ukey in _MODEL_TO_USAGE_KEY.items():
+                totals[ukey] += int(entry.get(mkey) or 0)
+    else:
+        totals = {k: int(usage.get(k) or 0) for k in _USAGE_TOKEN_KEYS}
+    return {
+        "total_cost_usd": _int_or_float(cost, "total_cost_usd"),
+        "usage": usage,
+        "model_usage": model_usage,
+        "totals": totals,
+    }
+
+
 def session_id_event_if_changed(
     thread_id: str, session_id: str | None, message
 ) -> tuple[str | None, StreamEvent | None]:
@@ -1027,10 +1155,26 @@ class InteractiveAgentSession:
         "TaskGet",
     ]
 
-    def __init__(self, thread_id: str, team_config=None, resume: str | None = None):
+    # Tools that need a human on the other end. Removed (and denied in
+    # can_use_tool) for non-interactive sessions, e.g. alert-triggered runs:
+    # otherwise the agent blocks on a question nobody will answer.
+    NON_INTERACTIVE_DISALLOWED_TOOLS = ("AskUserQuestion",)
+
+    def __init__(
+        self,
+        thread_id: str,
+        team_config=None,
+        resume: str | None = None,
+        interactive: bool = True,
+    ):
         self.thread_id = thread_id
         self.team_config = team_config
         self.resume = resume
+        self.interactive = interactive
+        # Cumulative ResultMessage usage at the end of the previous turn on
+        # this CLI process, and the usage of the last finished execute().
+        self._usage_baseline: dict | None = None
+        self.last_turn_usage: dict | None = None
         # Captured from init SystemMessage (and ResultMessage as backup).
         self.session_id: str | None = None
 
@@ -1070,6 +1214,19 @@ class InteractiveAgentSession:
         # Callback for tool permission requests (handles AskUserQuestion)
         async def can_use_tool_handler(tool_name: str, input_data: dict, context):
             """Handle tool permission requests, including AskUserQuestion."""
+            if (
+                not getattr(self, "interactive", True)
+                and tool_name in self.NON_INTERACTIVE_DISALLOWED_TOOLS
+            ):
+                from claude_agent_sdk.types import PermissionResultDeny
+
+                return PermissionResultDeny(
+                    message=(
+                        "This is an automatic investigation with no human "
+                        "attached; questions are disabled. Continue with your "
+                        "best judgment and state any assumptions in the report."
+                    )
+                )
             if tool_name == "AskUserQuestion":
                 import asyncio
                 import logging
@@ -1277,6 +1434,11 @@ class InteractiveAgentSession:
                 tc = root_config.tools
                 allowed_tools = [t for t in self.DEFAULT_TOOLS if t not in tc.disabled]
 
+        disallowed_tools: list[str] = []
+        if not getattr(self, "interactive", True):
+            disallowed_tools = list(self.NON_INTERACTIVE_DISALLOWED_TOOLS)
+            allowed_tools = [t for t in allowed_tools if t not in disallowed_tools]
+
         options_kwargs = dict(
             cwd=self._cwd,
             allowed_tools=allowed_tools,
@@ -1301,6 +1463,7 @@ class InteractiveAgentSession:
             # Truthy guard is intentional: empty/blank id must never be forwarded
             # as --resume (empty string and None both mean "no prior session").
             **({"resume": self.resume} if self.resume else {}),
+            **({"disallowed_tools": disallowed_tools} if disallowed_tools else {}),
         )
 
         # Apply execution limits and model selection from root agent config
@@ -1597,6 +1760,8 @@ class InteractiveAgentSession:
         if self.client is None:
             if not self.resume:
                 observability_reset_generation_watermark(self.thread_id)
+            # New CLI process: its running usage totals start from zero.
+            self._usage_baseline = None
             # Don't use async with here - we need to keep the client alive
             # across multiple execute() calls. We'll manage lifecycle manually.
             self.client = ClaudeSDKClient(options=self.options)
@@ -1667,6 +1832,10 @@ class InteractiveAgentSession:
         # the streaming-input running total instead of a sum of every result.
         last_result_message = None
         last_llm_model = None
+        # Running-total snapshot at the end of the previous turn; this turn's
+        # usage is the delta from it (see turn_usage_from_snapshots).
+        usage_baseline = getattr(self, "_usage_baseline", None)
+        self.last_turn_usage = None
 
         # Timeout for receive_messages drain (10 minutes for complex investigations)
         # This prevents hanging forever if interrupted from another request
@@ -1989,6 +2158,9 @@ class InteractiveAgentSession:
                                         f"⚠️ [AGENT] API error during run: status={message.api_error_status}, "
                                         f"stop_reason={message.stop_reason}"
                                     )
+                                turn_usage = turn_usage_from_snapshots(
+                                    snapshot_result_usage(message), usage_baseline
+                                )
                                 yield result_event(
                                     self.thread_id,
                                     result_text,
@@ -1998,6 +2170,11 @@ class InteractiveAgentSession:
                                         extracted_images if extracted_images else None
                                     ),
                                     files=extracted_files if extracted_files else None,
+                                    usage=(turn_usage or {}).get("usage"),
+                                    total_cost_usd=(turn_usage or {}).get(
+                                        "total_cost_usd"
+                                    ),
+                                    model_usage=(turn_usage or {}).get("model_usage"),
                                 )
                                 # receive_messages() does not stop on ResultMessage
                                 # (unlike receive_response()). Break so the outer
@@ -2083,6 +2260,14 @@ class InteractiveAgentSession:
             yield error_event(self.thread_id, error_msg, recoverable=False)
             # Don't re-raise - let the error event be sent cleanly
         finally:
+            # Usage of this whole execute() (all result messages, including a
+            # timeout's post-interrupt result) for agent_runs persistence.
+            current_snapshot = snapshot_result_usage(last_result_message)
+            if current_snapshot is not None:
+                self.last_turn_usage = turn_usage_from_snapshots(
+                    current_snapshot, usage_baseline
+                )
+                self._usage_baseline = current_snapshot
             # One generation per execute(), nested under the turn span. Must
             # run before the wrapper closes that span.
             observability_record_generation(
