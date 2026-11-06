@@ -1,0 +1,80 @@
+# open-telemetry/opentelemetry-demo 0.42.6 (app 3.1.0), namespace otel-demo.
+# helm upgrade --install otel-demo open-telemetry/opentelemetry-demo \
+#   --version 0.42.6 -n otel-demo --create-namespace -f this-file
+#
+# Bundled backends are off; the demo's collector ships everything over OTLP/HTTP
+# to the otel-lgtm pod (its own collector then routes metrics -> Prometheus
+# OTLP, traces -> Tempo, logs -> Loki native OTLP).
+
+jaeger:
+  enabled: false
+prometheus:
+  enabled: false
+grafana:
+  enabled: false
+opensearch:
+  enabled: false
+
+components:
+  # LLM demo components are not needed here. Side effect: the load generator's
+  # ask_agent task fails (no "agent" service), so load-generator client spans
+  # carry errors; the demo alert rules exclude service_name="load-generator".
+  agent:
+    enabled: false
+  chatbot:
+    enabled: false
+  mcp:
+    enabled: false
+
+opentelemetry-collector:
+  config:
+    processors:
+      # Rancher Desktop (docker runtime via cri-dockerd): the container.id an
+      # SDK reads inside the container differs from the kubelet's
+      # containerStatuses[].containerID, so container.id association silently
+      # fails and logs/metrics/traces lose k8s.namespace.name, k8s.pod.name, ...
+      # The chart prepends a container.id rule (because a profiles pipeline
+      # exists) unless one is present, and the processor uses the FIRST rule
+      # whose sources are all present. Keep container.id, but last.
+      k8s_attributes:
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: connection
+          - sources:
+              - from: resource_attribute
+                name: container.id
+    exporters:
+      # The chart's exporters for the disabled backends (otlp_grpc/jaeger,
+      # otlp_http/prometheus, opensearch, otlp_grpc/firepit) stay defined but
+      # unused: the collector only builds components referenced by a pipeline.
+      # Setting them to null does NOT delete subchart keys (helm 3.20 renders
+      # `opensearch: null`, i.e. a default config).
+      otlp_http/lgtm:
+        endpoint: http://lgtm.observability.svc.cluster.local:4318
+        tls:
+          insecure: true
+        sending_queue:
+          batch: {}
+    service:
+      pipelines:
+        # Lists replace (no merge): full exporter lists restated.
+        # span_metrics stays: it is the connector feeding the metrics pipeline
+        # (traces_span_metrics_* series).
+        traces:
+          exporters: [otlp_http/lgtm, span_metrics]
+        metrics:
+          exporters: [otlp_http/lgtm]
+        logs:
+          exporters: [otlp_http/lgtm]
+        # Profiles went to firepit (disabled). `profiles: null` does not delete
+        # a subchart pipeline (renders as nil and breaks the chart), so keep
+        # the pipeline with the chart's debug exporter. Nothing in the demo
+        # sends profiles while otel-ebpf-profiler is disabled.
+        profiles:
+          exporters: [debug]
