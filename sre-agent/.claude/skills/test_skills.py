@@ -15,11 +15,7 @@ Usage:
     python test_skills.py --skill jaeger
 
 Required environment variables per skill:
-    ClickUp:       CLICKUP_API_TOKEN
-    Coralogix:     CORALOGIX_DOMAIN, CORALOGIX_API_KEY
-    Datadog:       DATADOG_SITE, DATADOG_API_KEY, DATADOG_APP_KEY
-    Elasticsearch: ELASTICSEARCH_URL (optional: ES_USER, ES_PASSWORD)
-    Honeycomb:     HONEYCOMB_API_KEY
+    Loki:          LOKI_URL (or LOKI_BASE_URL)
     Jaeger:        JAEGER_URL
     Prometheus:    PROMETHEUS_URL
     Grafana:       GRAFANA_URL, GRAFANA_API_KEY
@@ -136,85 +132,24 @@ def check_env_vars(required: list[str]) -> tuple[bool, list[str]]:
 # =============================================================================
 
 
-def test_coralogix() -> list[TestResult]:
-    """Test Coralogix skill."""
+def test_loki() -> list[TestResult]:
+    """Test Loki skill."""
     results = []
 
-    ok, missing = check_env_vars(["CORALOGIX_DOMAIN", "CORALOGIX_API_KEY"])
-    if not ok:
+    # LOKI_URL (direct) or LOKI_BASE_URL (proxy) must be set.
+    if not (os.environ.get("LOKI_URL") or os.environ.get("LOKI_BASE_URL")):
         return [
             TestResult(
-                skill="observability-coralogix",
+                skill="observability-loki",
                 script="(env check)",
                 passed=False,
                 output="",
-                error=f"Missing env vars: {', '.join(missing)}",
+                error="Missing env vars: LOKI_URL (or LOKI_BASE_URL)",
             )
         ]
 
-    # Test list_services.py
-    result = run_script("observability-coralogix", "list_services.py", ["--json"])
-    result = validate_json_output(result)
-    results.append(result)
-
-    # Test get_statistics.py
-    result = run_script(
-        "observability-coralogix", "get_statistics.py", ["--time-range", "30", "--json"]
-    )
-    result = validate_json_output(result)
-    results.append(result)
-
-    return results
-
-
-def test_datadog() -> list[TestResult]:
-    """Test Datadog skill."""
-    results = []
-
-    ok, missing = check_env_vars(["DATADOG_SITE", "DATADOG_API_KEY", "DATADOG_APP_KEY"])
-    if not ok:
-        return [
-            TestResult(
-                skill="observability-datadog",
-                script="(env check)",
-                passed=False,
-                output="",
-                error=f"Missing env vars: {', '.join(missing)}",
-            )
-        ]
-
-    # Test get_statistics.py
-    result = run_script(
-        "observability-datadog", "get_statistics.py", ["--time-range", "30", "--json"]
-    )
-    result = validate_json_output(result)
-    results.append(result)
-
-    return results
-
-
-def test_elasticsearch() -> list[TestResult]:
-    """Test Elasticsearch skill."""
-    results = []
-
-    ok, missing = check_env_vars(["ELASTICSEARCH_URL"])
-    if not ok:
-        return [
-            TestResult(
-                skill="observability-elasticsearch",
-                script="(env check)",
-                passed=False,
-                output="",
-                error=f"Missing env vars: {', '.join(missing)}",
-            )
-        ]
-
-    # Test get_statistics.py
-    result = run_script(
-        "observability-elasticsearch",
-        "get_statistics.py",
-        ["--time-range", "30", "--json"],
-    )
+    # Test list_labels.py
+    result = run_script("observability-loki", "list_labels.py", ["--json"])
     result = validate_json_output(result)
     results.append(result)
 
@@ -309,100 +244,15 @@ def test_grafana() -> list[TestResult]:
     return results
 
 
-def test_honeycomb() -> list[TestResult]:
-    """Test Honeycomb skill."""
-    results = []
-
-    ok, missing = check_env_vars(["HONEYCOMB_API_KEY"])
-    if not ok:
-        return [
-            TestResult(
-                skill="observability-honeycomb",
-                script="(env check)",
-                passed=False,
-                output="",
-                error=f"Missing env vars: {', '.join(missing)}",
-            )
-        ]
-
-    # Test list_datasets.py
-    result = run_script("observability-honeycomb", "list_datasets.py", ["--json"])
-    result = validate_json_output(result)
-    results.append(result)
-
-    # If we have datasets, test get_statistics on the first one
-    if result.passed and result.output:
-        try:
-            data = json.loads(result.output)
-            if data and len(data) > 0:
-                dataset_slug = data[0].get("slug")
-                if dataset_slug:
-                    result2 = run_script(
-                        "observability-honeycomb",
-                        "get_statistics.py",
-                        [dataset_slug, "--time-range", "3600", "--json"],
-                    )
-                    result2 = validate_json_output(result2)
-                    results.append(result2)
-
-                    # Test run_query.py
-                    result3 = run_script(
-                        "observability-honeycomb",
-                        "run_query.py",
-                        [dataset_slug, "--calc", "COUNT", "--json"],
-                    )
-                    result3 = validate_json_output(result3)
-                    results.append(result3)
-        except json.JSONDecodeError:
-            pass
-
-    return results
-
-
-def test_clickup() -> list[TestResult]:
-    """Test ClickUp skill."""
-    results = []
-
-    ok, missing = check_env_vars(["CLICKUP_API_TOKEN"])
-    if not ok:
-        return [
-            TestResult(
-                skill="project-clickup",
-                script="(env check)",
-                passed=False,
-                output="",
-                error=f"Missing env vars: {', '.join(missing)}",
-            )
-        ]
-
-    # Test list_spaces.py
-    result = run_script("project-clickup", "list_spaces.py", ["--json"])
-    result = validate_json_output(result)
-    results.append(result)
-
-    # Test search_tasks.py (basic search)
-    result2 = run_script(
-        "project-clickup", "search_tasks.py", ["--limit", "5", "--json"]
-    )
-    result2 = validate_json_output(result2)
-    results.append(result2)
-
-    return results
-
-
 # =============================================================================
 # Main Test Runner
 # =============================================================================
 
 SKILL_TESTS = {
-    "coralogix": test_coralogix,
-    "datadog": test_datadog,
-    "elasticsearch": test_elasticsearch,
-    "honeycomb": test_honeycomb,
+    "loki": test_loki,
     "jaeger": test_jaeger,
     "prometheus": test_prometheus,
     "grafana": test_grafana,
-    "clickup": test_clickup,
 }
 
 

@@ -147,18 +147,18 @@ See `env.example` for all available integrations.
 
 ## Skills
 
-**52 skills** organized by category provide on-demand methodology and best practices:
+**22 skills** organized by category provide on-demand methodology and best practices:
 
 | Category | Skills |
 |----------|--------|
-| **Observability** | Coralogix, Grafana, Elasticsearch, Datadog, Splunk, New Relic, Honeycomb, Jaeger, Sentry, Loki, VictoriaLogs, VictoriaMetrics, Amplitude |
-| **Incidents & Alerts** | PagerDuty, Incident.io, Opsgenie, Blameless, FireHydrant |
-| **Infrastructure** | Kubernetes, AWS, Docker, GCP, Azure, Neo4j |
-| **Databases** | PostgreSQL, MySQL, Snowflake, BigQuery |
+| **Observability** | Loki, Grafana, Jaeger, metrics analysis (Prometheus) |
+| **Alerts** | alerting-context |
+| **Infrastructure** | Kubernetes, Docker, Azure, Neo4j |
+| **Databases** | PostgreSQL |
 | **Streaming** | Kafka |
-| **Platform** | Vercel, flagd (OpenFeature) |
-| **Project & Docs** | GitLab, Jira, Linear, Notion, ClickUp, Sourcegraph, Google Docs |
-| **Investigation** | Root cause analysis, observability methodology, metrics analysis, remediation, knowledge base (RAPTOR), incident comms |
+| **Platform** | Argo CD, flagd (OpenFeature) |
+| **Project & Docs** | GitHub, Jira, Confluence knowledge base |
+| **Investigation** | Root cause analysis, observability methodology, metrics analysis, remediation, knowledge base (RAPTOR), memory search |
 
 Skills are automatically invoked when relevant to the task. Located in `.claude/skills/` directory. Skills can be filtered per-agent via config-service (see `docs/SKILLS_FILTERING.md`).
 
@@ -197,7 +197,7 @@ Every investigation is recorded with full tool call traces:
 - **tools/** — Neo4j semantic layer
 - **pyproject.toml** — Python dependencies
 - **Dockerfile** — container image
-- **.claude/skills/** — 52 skills with methodology docs and scripts
+- **.claude/skills/** — 22 skills with methodology docs and scripts
 
 ## Features
 

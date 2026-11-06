@@ -22,7 +22,7 @@ from config import (
 # Fixture: simulated name map (directory_name -> frontmatter_name)
 SAMPLE_NAME_MAP = {
     "investigate": "investigate",
-    "observability-coralogix": "coralogix-analysis",
+    "observability-loki": "loki-analysis",
     "infrastructure-kubernetes": "kubernetes-debug",
     "observability": "observability",
     "remediation": "remediation",
@@ -52,10 +52,10 @@ def test_parse_enabled_skills_env_all():
 
 def test_parse_enabled_skills_env_csv():
     """ENABLED_SKILLS=a,b,c returns set of names."""
-    os.environ["ENABLED_SKILLS"] = "investigate, kubernetes-debug, coralogix-analysis"
+    os.environ["ENABLED_SKILLS"] = "investigate, kubernetes-debug, loki-analysis"
     try:
         result = parse_enabled_skills_env()
-        assert result == {"investigate", "kubernetes-debug", "coralogix-analysis"}
+        assert result == {"investigate", "kubernetes-debug", "loki-analysis"}
     finally:
         del os.environ["ENABLED_SKILLS"]
 
@@ -74,23 +74,23 @@ def test_parse_enabled_skills_env_empty():
 
 def test_normalize_dir_to_frontmatter():
     """Directory name is converted to frontmatter name."""
-    result = _normalize_skill_names({"observability-coralogix"}, SAMPLE_NAME_MAP)
-    assert result == {"coralogix-analysis"}
+    result = _normalize_skill_names({"observability-loki"}, SAMPLE_NAME_MAP)
+    assert result == {"loki-analysis"}
 
 
 def test_normalize_frontmatter_passthrough():
     """Already a frontmatter name — passes through unchanged."""
-    result = _normalize_skill_names({"coralogix-analysis"}, SAMPLE_NAME_MAP)
-    assert result == {"coralogix-analysis"}
+    result = _normalize_skill_names({"loki-analysis"}, SAMPLE_NAME_MAP)
+    assert result == {"loki-analysis"}
 
 
 def test_normalize_mixed():
     """Mix of directory names and frontmatter names."""
     result = _normalize_skill_names(
-        {"observability-coralogix", "investigate", "kubernetes-debug"},
+        {"observability-loki", "investigate", "kubernetes-debug"},
         SAMPLE_NAME_MAP,
     )
-    assert result == {"coralogix-analysis", "investigate", "kubernetes-debug"}
+    assert result == {"loki-analysis", "investigate", "kubernetes-debug"}
 
 
 # --- resolve_enabled_skills ---
@@ -98,10 +98,10 @@ def test_normalize_mixed():
 
 def test_resolve_env_overrides_config():
     """Env var takes priority over config."""
-    env_skills = {"investigate", "coralogix-analysis"}
+    env_skills = {"investigate", "loki-analysis"}
     config = SkillsConfig(enabled=["kubernetes-debug"])
     result = resolve_enabled_skills(env_skills, config, SAMPLE_NAME_MAP)
-    assert result == {"investigate", "coralogix-analysis"}
+    assert result == {"investigate", "loki-analysis"}
 
 
 def test_resolve_config_when_no_env():
@@ -142,14 +142,14 @@ def test_skills_config_defaults():
 
 def test_build_skill_name_map_with_frontmatter(tmp_path):
     """Reads SKILL.md frontmatter correctly."""
-    skill_dir = tmp_path / "observability-coralogix"
+    skill_dir = tmp_path / "observability-loki"
     skill_dir.mkdir()
     (skill_dir / "SKILL.md").write_text(
-        "---\nname: coralogix-analysis\ndescription: test\n---\n# Coralogix\n"
+        "---\nname: loki-analysis\ndescription: test\n---\n# Loki\n"
     )
 
     result = build_skill_name_map(str(tmp_path))
-    assert result == {"observability-coralogix": "coralogix-analysis"}
+    assert result == {"observability-loki": "loki-analysis"}
 
 
 def test_build_skill_name_map_no_frontmatter(tmp_path):
@@ -183,12 +183,12 @@ def test_compute_agent_skills_union():
             "log_agent": AgentConfig(
                 enabled=True,
                 name="log_agent",
-                skills={"observability": True, "coralogix-analysis": True},
+                skills={"observability": True, "loki-analysis": True},
             ),
         }
     )
     result = compute_enabled_skills_from_agents(tc, SAMPLE_NAME_MAP)
-    assert result == {"kubernetes-debug", "observability", "coralogix-analysis"}
+    assert result == {"kubernetes-debug", "observability", "loki-analysis"}
 
 
 def test_compute_agent_skills_disabled_agent_ignored():
@@ -263,7 +263,7 @@ def test_resolve_env_overrides_agent_skills():
 def test_remove_disabled_skill_dirs(tmp_path):
     """Removes directories for disabled skills."""
     # Create skill dirs with SKILL.md
-    for name in ["investigate", "observability-coralogix", "remediation"]:
+    for name in ["investigate", "observability-loki", "remediation"]:
         d = tmp_path / name
         d.mkdir()
         fm_name = SAMPLE_NAME_MAP.get(name, name)
@@ -274,9 +274,9 @@ def test_remove_disabled_skill_dirs(tmp_path):
 
     removed = remove_disabled_skill_dirs(str(tmp_path), enabled, name_map)
 
-    assert sorted(removed) == ["observability-coralogix", "remediation"]
+    assert sorted(removed) == ["observability-loki", "remediation"]
     assert (tmp_path / "investigate").exists()
-    assert not (tmp_path / "observability-coralogix").exists()
+    assert not (tmp_path / "observability-loki").exists()
     assert not (tmp_path / "remediation").exists()
 
 

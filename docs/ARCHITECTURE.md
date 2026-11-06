@@ -126,23 +126,22 @@ Neo4j holds service topology (dependencies, blast radius) alongside episodic mem
 - Not loaded automatically on vague initial alerts.
 - If Neo4j is unavailable, investigations continue without topology context.
 
-## Skills (51)
+## Skills (22)
 
 Skills are the primary integration surface: methodology docs plus optional Python scripts under each skill directory. Teams can disable skills per config; credentials are supplied via environment variables at runtime.
 
 | Category | Examples |
 |----------|----------|
 | **Core Methodology** | Investigation framework, observability methodology, infrastructure debugging, remediation |
-| **Observability** | Coralogix, Grafana, Elasticsearch, Datadog, Splunk, New Relic, Honeycomb, Jaeger, Sentry, Loki, VictoriaLogs, VictoriaMetrics, metrics analysis |
-| **Infrastructure & Cloud** | Kubernetes, AWS, Docker, GCP, Azure, Neo4j (topology) |
-| **Alerting & On-call** | PagerDuty, Opsgenie |
-| **Incident Management** | Incident.io, Blameless, FireHydrant, incident comms |
-| **Databases** | PostgreSQL, MySQL, Snowflake, BigQuery |
-| **Docs & Knowledge** | Confluence knowledge base, RAPTOR, Notion, Google Docs |
+| **Observability** | Loki, Grafana, Jaeger, metrics analysis (Prometheus) |
+| **Infrastructure & Cloud** | Kubernetes, Docker, Azure, Neo4j (topology) |
+| **Alerting & On-call** | alerting-context |
+| **Databases** | PostgreSQL |
+| **Docs & Knowledge** | Confluence knowledge base, RAPTOR |
 | **Memory** | memory-search |
-| **Code & Version Control** | GitHub, Bitbucket, GitLab, Sourcegraph |
-| **Ticketing & Project** | Jira, Linear, ClickUp |
-| **Other Integrations** | Jenkins, Argo CD, Vercel, Kafka, Amplitude, flagd (OpenFeature) |
+| **Code & Version Control** | GitHub |
+| **Ticketing & Project** | Jira |
+| **Other Integrations** | Argo CD, Kafka, flagd (OpenFeature) |
 
 Add a skill by creating `sre-agent/.claude/skills/<id>/SKILL.md` and regenerating the config-service catalog (`config_service/scripts/gen_skills_catalog.py`).
 

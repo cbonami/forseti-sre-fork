@@ -17,7 +17,7 @@
   <a href="https://www.opensre.in"><img src="https://img.shields.io/badge/website-opensre.in-green.svg" alt="OpenSRE Website" /></a>
 </p>
 
-OpenSRE is an open-source AI SRE agent that automatically investigates production incidents, finds root causes, and learns from every investigation. It combines **episodic memory** (remembering past incidents and what fixed them) with a **Neo4j knowledge graph** (understanding service dependencies and blast radius) and **51 production-ready skills** for tools like Datadog, Grafana, PagerDuty, Elasticsearch, Kubernetes, and AWS. Self-hosted, direct Anthropic by default (provider-agnostic via the optional LiteLLM proxy), and licensed Apache 2.0.
+OpenSRE is an open-source AI SRE agent that automatically investigates production incidents, finds root causes, and learns from every investigation. It combines **episodic memory** (remembering past incidents and what fixed them) with a **Neo4j knowledge graph** (understanding service dependencies and blast radius) and **22 skills** for tools like Grafana (Loki, Prometheus, Tempo/Jaeger), Kubernetes, GitHub, Jira, and Confluence. Self-hosted, direct Anthropic by default (provider-agnostic via the optional LiteLLM proxy), and licensed Apache 2.0.
 
 <p align="center">
   <a href="https://g1ctb3hnwvhw6s5v.public.blob.vercel-storage.com/how-it-works.mp4">
@@ -40,7 +40,7 @@ OpenSRE is an open-source AI SRE agent that automatically investigates productio
 |:--|:--|
 | **Learns from every incident** | OpenSRE remembers past investigations — what worked, what didn't. Similar incident at 3am? It already knows the playbook. |
 | **Understands your infrastructure** | Neo4j knowledge graph maps service dependencies, so the agent knows blast radius before it starts investigating. |
-| **Plugs into what you already use** | 51 production skills for Datadog, Grafana, PagerDuty, Elasticsearch, Kubernetes, AWS, and more. No rip-and-replace. |
+| **Plugs into what you already use** | 22 skills for Grafana (Loki, Prometheus), Kubernetes, GitHub, Jira, Confluence, and more. No rip-and-replace. |
 
 ## Quick Start
 
@@ -62,7 +62,7 @@ Requires **Docker Desktop** (or equivalent) running. `make dev` creates the exte
 ## Architecture
 
 <p align="center">
-  <img src=".github/assets/architecture.png" alt="OpenSRE architecture diagram — Claude Agent SDK orchestration with episodic memory, 51 investigation skills, and Neo4j knowledge graph" width="900" />
+  <img src=".github/assets/architecture.png" alt="OpenSRE architecture diagram — Claude Agent SDK orchestration with episodic memory, 22 investigation skills, and Neo4j knowledge graph" width="900" />
 </p>
 
 > **[→ Detailed architecture docs](https://www.opensre.in/docs/architecture)** · **[Architecture overview](docs/ARCHITECTURE.md)**
@@ -71,7 +71,7 @@ Requires **Docker Desktop** (or equivalent) running. `make dev` creates the exte
 
 | Feature | Description |
 |:--------|:------------|
-| **51 Production Skills** | Elasticsearch, Datadog, Grafana, PagerDuty, K8s, AWS, Jenkins, Argo CD, and more |
+| **22 Skills** | Loki, Grafana, Jaeger, Prometheus, K8s, GitHub, Jira, Argo CD, and more |
 | **Long-term Memory** | Neo4j episodic memory — surfaces past solutions mid-investigation via `memory-search` |
 | **Knowledge Graph** | Neo4j service topology, dependency traversal, blast radius |
 | **Multi-provider LLM** | Direct Anthropic by default; optional LiteLLM for OpenAI, Gemini, and more |

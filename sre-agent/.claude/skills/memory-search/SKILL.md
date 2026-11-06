@@ -16,7 +16,7 @@ Use memory search **after** you have concrete evidence—not on vague initial al
 - You identified a failing component or service
 - A symptom may have been investigated before and you want prior root causes or skills that worked
 
-**Do not** search on ticket titles alone (e.g. "build pipeline failing"). Gather facts first (read Jenkins console, check logs), then search with an enriched query.
+**Do not** search on ticket titles alone (e.g. "build pipeline failing"). Gather facts first (read the CI job log, check logs), then search with an enriched query.
 
 ## Query guide
 
@@ -24,13 +24,13 @@ Build queries from **symptom + component + system**:
 
 - **Symptom** — what went wrong (OOM, connection pool exhausted, 503, test failure)
 - **Component** — where it failed (surveys-module, checkout, payment-db)
-- **System** — context (Jenkins, Kubernetes, PostgreSQL)
+- **System** — context (GitHub Actions, Kubernetes, PostgreSQL)
 
 ## Usage
 
 ```bash
 python .claude/skills/memory-search/scripts/search.py \
-  --query "Maven OOM surveys-module test failure Jenkins" --limit 5
+  --query "Maven OOM surveys-module test failure GitHub Actions" --limit 5
 ```
 
 ## JSON output

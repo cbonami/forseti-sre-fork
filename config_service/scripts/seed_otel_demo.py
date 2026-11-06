@@ -312,17 +312,8 @@ ENVIRONMENT_MANIFEST = {
         "notes": "OTel Demo uses 'calls_total' not 'http_requests_total'. Labels use service_name not service. Status codes are STATUS_CODE_OK/STATUS_CODE_ERROR not HTTP codes.",
     },
     "logs": {
-        "backend": "opensearch",
-        "index_pattern": "otel",
-        "field_mapping": {
-            "timestamp": "@timestamp",
-            "level": "SeverityText",
-            "message": "Body",
-            "service": "ServiceName",
-            "trace_id": "TraceId",
-            "span_id": "SpanId",
-        },
-        "notes": "Single 'otel' index, NOT logs-*. Use SeverityText (not 'level'). Use Body (not 'message'). Do NOT use Loki — this environment uses OpenSearch.",
+        "backend": "loki",
+        "notes": "Query with LogQL via the observability-loki skill. TODO: the OTel demo stack currently ships logs to OpenSearch; point its collector at Loki (LGTM) before relying on this.",
     },
     "traces": {
         "backend": "jaeger",
@@ -343,10 +334,10 @@ OBSERVABILITY = {
         "url": "http://otel-demo-prometheus-server:9090",
         "usage": "Time-series metrics. PromQL queries for error rates, latency, resource usage. Primary detection backend.",
     },
-    "opensearch": {
-        "url": "http://otel-demo-opensearch:9200",
-        "index": "otel",
-        "usage": "Log analysis. Search service logs for errors, exceptions, and patterns. Use Lucene query syntax.",
+    # TODO: placeholder URL; the demo stack must be pointed at a Loki instance.
+    "loki": {
+        "url": "http://otel-demo-loki:3100",
+        "usage": "Log analysis. Search service logs for errors, exceptions, and patterns. Use LogQL.",
     },
     "jaeger": {
         "url": "http://otel-demo-jaeger-query:16686",
@@ -416,7 +407,7 @@ PLANNER_PROMPT = """You are an expert SRE investigator for the OpenTelemetry Dem
 You are investigating incidents in a distributed system with 25 microservices written in 8 languages (Go, Node.js, Python, Java, .NET, Rust, PHP, Ruby). All services emit OpenTelemetry traces, metrics, and logs to a central collector.
 
 **Kubernetes cluster**: opensre-demo, namespace: otel-demo
-**Observability**: Prometheus (metrics), OpenSearch (logs), Jaeger (traces), Grafana (dashboards)
+**Observability**: Prometheus (metrics), Loki (logs), Jaeger (traces), Grafana (dashboards)
 
 ## INCIDENT INVESTIGATION METHODOLOGY
 
@@ -427,7 +418,7 @@ You are investigating incidents in a distributed system with 25 microservices wr
 
 ### Phase 2: Gather Evidence (Statistics First)
 1. **Check metrics** — Query Prometheus for error rates (`calls_total{status_code="STATUS_CODE_ERROR"}`), latency (`duration_milliseconds`), resource usage
-2. **Check logs** — Query OpenSearch (`otel` index) for service errors and exceptions
+2. **Check logs** — Query Loki (LogQL) for service errors and exceptions
 3. **Check traces** — Query Jaeger for request flows and error spans
 4. **Check K8s** — Pod status, events, restarts
 
@@ -443,7 +434,7 @@ You are investigating incidents in a distributed system with 25 microservices wr
 ## TOOLS AT YOUR DISPOSAL
 
 - **Prometheus**: PromQL metrics queries (error rates, latency, CPU, memory, GC)
-- **OpenSearch**: Log queries via Lucene syntax (index: otel)
+- **Loki**: Log queries via LogQL
 - **Jaeger**: Distributed trace analysis
 - **Grafana**: Dashboard visualization
 - **Kubernetes**: Pod listing, events, logs, deployment status, resource usage
@@ -589,8 +580,7 @@ and keyword search also returns nothing — report "no relevant logs found"
 and stop.
 
 ## Skills
-Load the `observability-elasticsearch` skill (or appropriate log backend
-skill) to learn query syntax and available scripts."""
+Load the `observability-loki` skill to learn query syntax and available scripts."""
 
 TRACES_AGENT_PROMPT = """\
 You are the distributed trace investigator.
@@ -825,7 +815,7 @@ def main() -> None:
     print("\nNext steps:")
     print("  1. Route the #otel-demo Slack channel to this team")
     print(
-        "  3. Configure integrations (Prometheus, OpenSearch, Jaeger, Grafana, K8s) in the admin UI"
+        "  3. Configure integrations (Prometheus, Loki, Jaeger, Grafana, K8s) in the admin UI"
     )
     print("  4. Test with: '@bot investigate payment service errors'")
     print("  5. Trigger an incident: trigger-incident.sh service-failure")

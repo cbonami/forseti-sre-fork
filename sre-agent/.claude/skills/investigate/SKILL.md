@@ -30,7 +30,7 @@ Key principle: **Aggregations before samples**
 2. Identify error patterns and temporal clusters
 3. THEN sample specific entries
 
-### Infrastructure (Kubernetes, AWS)
+### Infrastructure (Kubernetes)
 For K8s/infrastructure issues:
 - Spawn `k8s-debugger` subagent
 - **Events BEFORE logs** - events explain most issues faster
@@ -113,7 +113,7 @@ Structure your conclusion:
 - Don't repeat queries with same parameters
 - Start narrow, expand only if needed
 - Maximum 6-8 tool calls per investigation phase
-- For config/repo tasks (Bitbucket, repo crawls, manifest hunts), prefer **sequential** subagent work over parallel Bitbucket + Kubernetes crawls — each subagent forks many shells and can exhaust the container process budget
+- For config/repo tasks (GitHub, repo crawls, manifest hunts), prefer **sequential** subagent work over parallel GitHub + Kubernetes crawls — each subagent forks many shells and can exhaust the container process budget
 
 ## When to Use Subagents
 

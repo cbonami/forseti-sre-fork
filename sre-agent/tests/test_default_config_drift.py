@@ -44,7 +44,6 @@ def test_default_root_dispatches_specialists_directly():
     planner = _default_agents()["planner"]
     assert set(planner["sub_agents"]) == {
         "kubernetes",
-        "aws",
         "metrics",
         "log_analysis",
         "github",
@@ -64,10 +63,6 @@ _EXPECTED_DESCRIPTIONS = {
     "kubernetes": (
         "Kubernetes and container diagnosis: CrashLoopBackOff, OOMKilled, "
         "Pending pods, failing deployments, pod events and container logs"
-    ),
-    "aws": (
-        "AWS resource diagnosis: RDS connection exhaustion, Lambda timeouts, "
-        "ECS task failures, load balancer and CloudWatch signals"
     ),
     "metrics": (
         "Metric anomaly detection and correlation: error-rate and latency "

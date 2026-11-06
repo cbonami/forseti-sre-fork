@@ -112,4 +112,4 @@ def test_poc_template_enables_all_specialist_subagents(sample_team_config):
     """The triage template enables all specialists via planner.sub_agents."""
     result = resolve_registered_agents(sample_team_config)
     assert "investigation" not in result  # flat topology: no mid-tier
-    assert {"kubernetes", "metrics", "log_analysis", "github", "aws"} <= set(result)
+    assert {"kubernetes", "metrics", "log_analysis", "github"} <= set(result)

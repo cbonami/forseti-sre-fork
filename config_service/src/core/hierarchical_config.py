@@ -434,7 +434,6 @@ def get_default_agent_config() -> Dict[str, Any]:
                 "max_turns": 50,
                 "sub_agents": {
                     "kubernetes": True,
-                    "aws": True,
                     "metrics": True,
                     "log_analysis": True,
                     "github": True,
@@ -452,19 +451,6 @@ def get_default_agent_config() -> Dict[str, Any]:
                 ),
                 "model": {"name": "inherit"},
                 "prompt": {"system": DEFAULT_PROMPTS.get("kubernetes", "")},
-                "max_turns": 15,
-                "sub_agents": {},
-                "mcps": {},
-            },
-            "aws": {
-                "enabled": True,
-                "name": "AWS Agent",
-                "description": (
-                    "AWS resource diagnosis: RDS connection exhaustion, Lambda "
-                    "timeouts, ECS task failures, load balancer and CloudWatch signals"
-                ),
-                "model": {"name": "inherit"},
-                "prompt": {"system": DEFAULT_PROMPTS.get("aws", "")},
                 "max_turns": 15,
                 "sub_agents": {},
                 "mcps": {},
@@ -606,7 +592,7 @@ def fetch_integration_schemas_from_db(db: Session) -> Dict[str, Any]:
     Returns a dict like:
     {
         "integrations": {
-            "coralogix": {
+            "prometheus": {
                 "level": "org",
                 "locked": False,
                 "config_schema": {...}

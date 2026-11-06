@@ -383,7 +383,7 @@ class SkillsConfig(BaseModel):
 
     Example:
         {
-            "enabled": ["investigate", "infrastructure-kubernetes", "observability-coralogix"],
+            "enabled": ["investigate", "infrastructure-kubernetes", "observability-loki"],
             "disabled": []
         }
     """

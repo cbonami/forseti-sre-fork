@@ -47,33 +47,13 @@ _ALL_SKILLS = object()
 _ANTHROPIC_MODEL_ALIASES = {"sonnet", "opus", "haiku", "inherit"}
 
 LEGACY_SKILL_NAME_MAP = {
-    "opsgenie-integration": "alerting-opsgenie",
-    "google-docs-integration": "docs-google",
-    "notion-integration": "docs-notion",
-    "blameless-integration": "incident-blameless",
-    "firehydrant-integration": "incident-firehydrant",
-    "incidentio-integration": "incident-incidentio",
-    "aws-infrastructure": "infrastructure-aws",
     "azure-infrastructure": "infrastructure-azure",
     "docker-debugging": "infrastructure-docker",
-    "gcp-infrastructure": "infrastructure-gcp",
     "kubernetes-debug": "infrastructure-kubernetes",
-    "victoriametrics-metrics": "metrics-victoriametrics",
-    "coralogix-analysis": "observability-coralogix",
-    "datadog-analysis": "observability-datadog",
-    "elasticsearch-analysis": "observability-elasticsearch",
     "grafana-dashboards": "observability-grafana",
-    "honeycomb-analysis": "observability-honeycomb",
     "jaeger-analysis": "observability-jaeger",
-    "newrelic-observability": "observability-newrelic",
-    "sentry-monitoring": "observability-sentry",
-    "splunk-analysis": "observability-splunk",
-    "victorialogs-analysis": "observability-victorialogs",
     "jira-integration": "project-jira",
-    "linear-integration": "project-linear",
     "kafka-streaming": "streaming-kafka",
-    "gitlab-integration": "vcs-gitlab",
-    "sourcegraph-integration": "vcs-sourcegraph",
 }
 
 

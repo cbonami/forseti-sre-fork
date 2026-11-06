@@ -1,6 +1,6 @@
 ---
 name: infrastructure
-description: Infrastructure debugging for Kubernetes and AWS. Use when investigating pod crashes, deployment issues, resource problems, container failures, or cloud infrastructure issues.
+description: Infrastructure debugging for Kubernetes. Use when investigating pod crashes, deployment issues, resource problems, or container failures.
 ---
 
 # Infrastructure Debugging
@@ -10,10 +10,6 @@ description: Infrastructure debugging for Kubernetes and AWS. Use when investiga
 ### Kubernetes
 For pod crashes, deployment issues, resource problems, container failures.
 Use: `/infrastructure-kubernetes`
-
-### AWS
-For EC2, ECS, Lambda, and CloudWatch issues.
-Use: `/infrastructure-aws`
 
 ## Quick Reference
 

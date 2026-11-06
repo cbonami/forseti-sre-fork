@@ -15,7 +15,7 @@ Web UI -> sre-agent (Claude Agent SDK)
 config-service <- used by web_ui, sre-agent
 ```
 
-**sre-agent** is the core investigation agent. Uses the Claude Agent SDK: a root `investigator` agent dispatches specialist subagents via the SDK `Task` tool. 51 skills (progressive knowledge loading) via the SDK Skill tool.
+**sre-agent** is the core investigation agent. Uses the Claude Agent SDK: a root `investigator` agent dispatches specialist subagents via the SDK `Task` tool. 22 skills (progressive knowledge loading) via the SDK Skill tool.
 
 **web_ui** is the admin console and agent entry point (Next.js, npm). Agent runs, config editor, knowledge base explorer, memory pages.
 
