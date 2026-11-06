@@ -41,9 +41,6 @@ spec:
         # Placeholder API key - Envoy injects real one via ext_authz
         - name: ANTHROPIC_API_KEY
           value: "sk-ant-placeholder-proxy-will-inject-real-key"
-        # Coralogix SDK: route API requests through Envoy proxy
-        - name: CORALOGIX_BASE_URL
-          value: "http://localhost:8001"
         # Disable Laminar's claude-agent-sdk instrumentation
         - name: DISABLE_LAMINAR
           value: "true"

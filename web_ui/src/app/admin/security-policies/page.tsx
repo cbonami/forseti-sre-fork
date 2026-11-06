@@ -190,7 +190,7 @@ export default function SecurityPoliciesPage() {
                     } catch {}
                   }}
                   rows={3}
-                  placeholder='["model", "enabled_tools.aws"]'
+                  placeholder='["model", "enabled_tools.kubernetes"]'
                   className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-white dark:bg-stone-700 font-mono text-sm text-stone-900 dark:text-white"
                 />
                 <p className="text-xs text-stone-500 mt-1">JSON array of config paths that teams cannot override</p>

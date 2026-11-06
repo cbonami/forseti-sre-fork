@@ -282,35 +282,18 @@ def derive_integrations_from_tools(tools: set) -> list:
     # Map integration IDs to human-readable display names
     integration_display_names = {
         "kubernetes": "Kubernetes",
-        "aws": "AWS",
+        "loki": "Loki",
         "github": "GitHub",
-        "gitlab": "GitLab",
         "pagerduty": "PagerDuty",
-        "opsgenie": "Opsgenie",
-        "incidentio": "Incident.io",
-        "datadog": "Datadog",
         "prometheus": "Prometheus",
         "grafana": "Grafana",
-        "newrelic": "New Relic",
-        "sentry": "Sentry",
-        "splunk": "Splunk",
-        "elasticsearch": "Elasticsearch",
-        "coralogix": "Coralogix",
-        "snowflake": "Snowflake",
-        "bigquery": "BigQuery",
         "postgresql": "PostgreSQL",
-        "mysql": "MySQL",
         "kafka": "Kafka",
         "schema_registry": "Schema Registry",
         "kafka_connect": "Kafka Connect",
         "confluence": "Confluence",
         "jira": "Jira",
-        "linear": "Linear",
-        "notion": "Notion",
-        "google_docs": "Google Docs",
         "msteams": "Microsoft Teams",
-        "gcp": "GCP",
-        "sourcegraph": "Sourcegraph",
     }
 
     # Collect all integration IDs from the tools
@@ -331,9 +314,8 @@ def derive_integrations_from_tools(tools: set) -> list:
     priority_order = [
         "GitHub",
         "Kubernetes",
-        "AWS",
-        "Datadog",
         "Prometheus",
+        "Loki",
         "PagerDuty",
         "Grafana",
     ]

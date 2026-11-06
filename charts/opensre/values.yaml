@@ -82,11 +82,6 @@ externalSecrets:
       secretName: opensre-pagerduty
       webhookSecretKey: webhook_secret
       remoteRefKey: opensre/prod/pagerduty_webhook_secret
-    incidentio:
-      enabled: false
-      secretName: opensre-incidentio
-      webhookSecretKey: webhook_secret
-      remoteRefKey: opensre/prod/incidentio_webhook_secret
     orchestratorInternal:
       enabled: false
       secretName: opensre-orchestrator-internal
@@ -100,11 +95,6 @@ externalSecrets:
       secretKeyKey: LANGFUSE_SECRET_KEY
       publicKeyRemoteRefKey: opensre/prod/langfuse_public_key
       secretKeyRemoteRefKey: opensre/prod/langfuse_secret_key
-    newRelic:
-      enabled: true
-      secretName: opensre-newrelic
-      apiKeyKey: NEW_RELIC_API_KEY
-      apiKeyRemoteRefKey: opensre/prod/newrelic_api_key
     # Recall.ai for real-time meeting transcription
     recall:
       enabled: true
@@ -145,13 +135,6 @@ externalSecrets:
       secretName: opensre-shared-anthropic
       secretKey: ANTHROPIC_API_KEY
       remoteRefKey: opensre/prod/shared_anthropic_api_key
-  # Vercel integration (deployment webhooks and API access)
-  vercel:
-    enabled: false
-    secretPath: ""
-
-# Vercel webhook signature verification domain
-vercelVerify: ""
 
 # Plain Kubernetes Secret names for self-hosted profile (externalSecrets.enabled: false).
 # Operator creates these with kubectl create secret generic ... --from-env-file=...
@@ -358,7 +341,7 @@ services:
     # Agent Observability — LLM tracing for monitoring agent behavior
     # Backend options: "langfuse", "laminar", "none"
     # This traces the agent's own LLM calls (token usage, latency, prompts).
-    # NOT the same as tool integrations (Datadog, Grafana, etc.) which the agent
+    # NOT the same as tool integrations (Grafana, GitHub, etc.) which the agent
     # uses to investigate customer incidents.
     agentObservability:
       backend: "none"  # "langfuse" | "laminar" | "none"

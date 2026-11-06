@@ -545,7 +545,6 @@ export default function OrgDefaultsPage() {
                         onChange={(e) => setNewMcp({ ...newMcp, type: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-600 bg-white dark:bg-stone-700"
                       >
-                        <option value="datadog">Datadog</option>
                         <option value="github">GitHub</option>
                         <option value="kubernetes">Kubernetes</option>
                         <option value="custom">Custom</option>

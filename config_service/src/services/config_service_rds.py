@@ -31,10 +31,7 @@ INHERIT_SENTINEL = "__INHERIT__"
 # Routing identifier fields (list fields in team routing config)
 ROUTING_FIELDS = [
     "slack_channel_ids",
-    "incidentio_team_ids",
-    "incidentio_alert_source_ids",
     "pagerduty_service_ids",
-    "coralogix_team_names",
     "github_repos",
     "services",
 ]
@@ -77,7 +74,7 @@ def _normalize_routing_value(field: str, value: str) -> str:
     """Normalize routing identifier value for comparison."""
     value = value.strip()
     # Lowercase for text-based identifiers
-    if field in ("coralogix_team_names", "github_repos", "services"):
+    if field in ("github_repos", "services"):
         value = value.lower()
     return value
 

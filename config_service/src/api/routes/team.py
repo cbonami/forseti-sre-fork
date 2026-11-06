@@ -1116,7 +1116,7 @@ async def get_skills_catalog_endpoint(
 class OutputDestination(BaseModel):
     """Single output destination configuration."""
 
-    type: str  # slack, github, pagerduty, incidentio
+    type: str  # teams, github, pagerduty
     channel_id: Optional[str] = None
     channel_name: Optional[str] = None
     repo: Optional[str] = None

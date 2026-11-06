@@ -63,7 +63,7 @@ class EnvManager:
         This operation is atomic and thread-safe using file locking.
 
         Args:
-            key: Environment variable name (e.g., "CORALOGIX_API_KEY")
+            key: Environment variable name (e.g., "GRAFANA_API_KEY")
             value: Environment variable value
             comment: Optional comment to add above the variable
         """

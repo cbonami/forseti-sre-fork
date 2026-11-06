@@ -283,21 +283,6 @@ spec:
               value: {{ .Values.services.agent.tracing.otlp.endpoint | quote }}
             {{- end }}
             {{- end }}
-            # =================================================================
-            # Vercel Integration
-            # =================================================================
-            {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vercel.enabled }}
-            - name: VERCEL_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: opensre-vercel
-                  key: token
-            - name: VERCEL_TEAM_ID
-              valueFrom:
-                secretKeyRef:
-                  name: opensre-vercel
-                  key: team_id
-            {{- end }}
             # Static team token (dev/single-tenant mode only)
             {{- if and .Values.externalSecrets.enabled .Values.services.agent.staticTeamToken.enabled }}
             - name: OPENSRE_TEAM_TOKEN

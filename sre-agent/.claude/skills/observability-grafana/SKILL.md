@@ -56,18 +56,18 @@ python .claude/skills/observability-grafana/scripts/get_alerts.py
 ```bash
 python .claude/skills/observability-grafana/scripts/create_dashboard.py \
   --title "My Dashboard" \
-  --template .claude/skills/observability-grafana/templates/vercel-overview.json
+  --template /path/to/dashboard.json
 
 # With folder:
 python .claude/skills/observability-grafana/scripts/create_dashboard.py \
   --title "My Dashboard" \
-  --template .claude/skills/observability-grafana/templates/vercel-overview.json \
+  --template /path/to/dashboard.json \
   --folder-uid FOLDER_UID
 
 # Overwrite existing:
 python .claude/skills/observability-grafana/scripts/create_dashboard.py \
   --title "My Dashboard" \
-  --template .claude/skills/observability-grafana/templates/vercel-overview.json \
+  --template /path/to/dashboard.json \
   --overwrite
 ```
 
@@ -75,11 +75,8 @@ python .claude/skills/observability-grafana/scripts/create_dashboard.py \
 
 ## Dashboard Templates
 
-Pre-built templates are in `.claude/skills/observability-grafana/templates/`:
-
-| Template | Description |
-|----------|-------------|
-| `vercel-overview.json` | 4-panel Vercel monitoring: error count, error rate, log stream, request summary |
+No templates are bundled. Pass a Grafana dashboard JSON file with `--template`
+(for example one exported from an existing dashboard).
 
 ---
 

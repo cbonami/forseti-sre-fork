@@ -154,11 +154,8 @@ export default function AdminHomePage() {
       openai: Zap,
       github: Github,
       kubernetes: Cloud,
-      aws: Cloud,
-      datadog: BarChart3,
       grafana: BarChart3,
       pagerduty: AlertCircle,
-      coralogix: BarChart3,
     };
     return iconMap[name.toLowerCase()] || Settings;
   };

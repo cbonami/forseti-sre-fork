@@ -59,14 +59,9 @@ class AIPipelineConfig(BaseModel):
 class DependencyDiscoverySourcesConfig(BaseModel):
     """Toggle which discovery sources to use."""
 
-    new_relic: bool = Field(
-        default=True, description="Use New Relic distributed tracing"
-    )
-    cloudwatch: bool = Field(default=False, description="Use AWS X-Ray traces")
     prometheus: bool = Field(
-        default=False, description="Use Prometheus service mesh metrics"
+        default=True, description="Use Prometheus service mesh metrics"
     )
-    datadog: bool = Field(default=False, description="Use Datadog APM traces")
 
 
 class DependencyDiscoveryConfig(BaseModel):
@@ -80,8 +75,7 @@ class DependencyDiscoveryConfig(BaseModel):
             "enabled": true,
             "schedule": "0 */2 * * *",
             "sources": {
-                "new_relic": true,
-                "datadog": true
+                "prometheus": true
             },
             "time_range_hours": 24,
             "min_confidence": 0.7
@@ -152,20 +146,13 @@ class KnowledgeIngestionSourceConfig(BaseModel):
     These inherit from parent configs (org → team) with override capability.
     """
 
-    # Web sources (Confluence, Google Docs, etc.)
+    # Web sources (Confluence, etc.)
     confluence_enabled: bool = Field(
         default=False, description="Ingest from Confluence"
     )
     confluence_spaces: List[str] = Field(
         default_factory=list,
         description="Confluence space keys to ingest (empty = all accessible)",
-    )
-    google_docs_enabled: bool = Field(
-        default=False, description="Ingest from Google Docs"
-    )
-    google_docs_folders: List[str] = Field(
-        default_factory=list,
-        description="Google Drive folder IDs to ingest",
     )
 
     # Grafana dashboards and alerts

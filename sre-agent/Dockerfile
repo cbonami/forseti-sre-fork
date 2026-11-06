@@ -1,18 +1,16 @@
 FROM python:3.11-slim
 
-# Install kubectl + AWS CLI v2 + Argo CD CLI + Bitbucket CLI + GitHub CLI for the build's target architecture.
+# Install kubectl + AWS CLI v2 + Argo CD CLI + GitHub CLI for the build's target architecture.
 # kubectl is used by the infrastructure-kubernetes skill.
 # AWS CLI is needed for EKS exec auth (~/.kube/config runs `aws eks get-token`)
 # and so boto3 SSO credential refresh works from inside the container.
 # argocd is used by the platform-argocd skill (app sync/get/history/logs/diff).
-# bkt is used by the vcs-bitbucket skill.
 # gh is used by the vcs-github skill.
 # TARGETARCH is auto-set by BuildKit (arm64 on Apple Silicon, amd64 elsewhere);
 # binaries MUST match the base image arch, otherwise Rosetta fails with
 # "failed to open elf at /lib64/ld-linux-x86-64.so.2" on Apple Silicon.
 ARG TARGETARCH
 ARG ARGOCD_VERSION=v3.4.4
-ARG BKT_VERSION=0.28.2
 ARG GH_VERSION=2.96.0
 # Split downloads so flaky networks can resume from cached layers; curl retries on transient failures.
 RUN apt-get update && \
@@ -35,13 +33,6 @@ RUN ARGOCD_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo amd64) && \
       -o /usr/local/bin/argocd \
       "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-${ARGOCD_ARCH}" && \
     chmod 555 /usr/local/bin/argocd
-RUN BKT_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo x86_64) && \
-    curl -fSL --retry 5 --retry-delay 5 --retry-all-errors \
-      -o /tmp/bkt.tgz \
-      "https://github.com/avivsinai/bitbucket-cli/releases/download/v${BKT_VERSION}/bkt_${BKT_VERSION}_linux_${BKT_ARCH}.tar.gz" && \
-    tar -xzf /tmp/bkt.tgz -C /usr/local/bin bkt && \
-    chmod 555 /usr/local/bin/bkt && \
-    rm /tmp/bkt.tgz
 RUN GH_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo arm64 || echo amd64) && \
     curl -fSL --retry 5 --retry-delay 5 --retry-all-errors \
       -o /tmp/gh.tgz \

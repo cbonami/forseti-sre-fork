@@ -23,22 +23,15 @@ def _infer_tool_category(tool_name: str) -> str:
         return "kubernetes"
     elif any(
         k in name_lower
-        for k in ["aws", "ec2", "s3", "lambda", "cloudwatch", "rds", "ecs"]
-    ):
-        return "aws"
-    elif any(
-        k in name_lower
         for k in ["github", "git", "pr", "pull_request", "commit", "branch", "issue"]
     ):
         return "github"
-    elif any(k in name_lower for k in ["slack"]):
-        return "communication"
     elif any(
         k in name_lower
         for k in [
             "grafana",
             "prometheus",
-            "coralogix",
+            "loki",
             "metrics",
             "alert",
             "logs",
@@ -48,7 +41,7 @@ def _infer_tool_category(tool_name: str) -> str:
         return "observability"
     elif any(
         k in name_lower
-        for k in ["snowflake", "bigquery", "postgres", "sql", "query", "database"]
+        for k in ["postgres", "sql", "query", "database"]
     ):
         return "data"
     elif any(k in name_lower for k in ["anomal", "correlate", "detect", "forecast"]):
@@ -162,93 +155,6 @@ BUILT_IN_TOOLS_METADATA = [
         "description": "Get CPU and memory usage of pods",
         "category": "kubernetes",
         "required_integrations": ["kubernetes"],
-    },
-    # AWS tools
-    {
-        "id": "describe_ec2_instance",
-        "name": "Describe EC2 Instance",
-        "description": "Get information about an EC2 instance",
-        "category": "aws",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "get_cloudwatch_logs",
-        "name": "Get CloudWatch Logs",
-        "description": "Query CloudWatch logs",
-        "category": "aws",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "describe_lambda_function",
-        "name": "Describe Lambda Function",
-        "description": "Get information about a Lambda function",
-        "category": "aws",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "get_rds_instance_status",
-        "name": "Get RDS Instance Status",
-        "description": "Get status of an RDS database instance",
-        "category": "other",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "query_cloudwatch_insights",
-        "name": "Query CloudWatch Insights",
-        "description": "Run CloudWatch Insights queries",
-        "category": "aws",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "get_cloudwatch_metrics",
-        "name": "Get CloudWatch Metrics",
-        "description": "Get CloudWatch metrics data",
-        "category": "aws",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "list_ecs_tasks",
-        "name": "List ECS Tasks",
-        "description": "List ECS tasks in a cluster",
-        "category": "other",
-        "required_integrations": ["aws"],
-    },
-    # Slack tools
-    {
-        "id": "slack_search_messages",
-        "name": "Search Slack Messages",
-        "description": "Search for messages in Slack",
-        "category": "communication",
-        "required_integrations": ["slack"],
-    },
-    {
-        "id": "slack_get_channel_history",
-        "name": "Get Channel History",
-        "description": "Get message history from a Slack channel",
-        "category": "communication",
-        "required_integrations": ["slack"],
-    },
-    {
-        "id": "slack_get_thread_replies",
-        "name": "Get Thread Replies",
-        "description": "Get replies in a Slack thread",
-        "category": "communication",
-        "required_integrations": ["slack"],
-    },
-    {
-        "id": "slack_post_message",
-        "name": "Post Slack Message",
-        "description": "Post a message to Slack",
-        "category": "communication",
-        "required_integrations": ["slack"],
-    },
-    # Alias for backward compatibility
-    {
-        "id": "post_slack_message",
-        "name": "Post Slack Message",
-        "description": "Post a message to Slack (alias)",
-        "category": "communication",
-        "required_integrations": ["slack"],
     },
     # GitHub tools
     {
@@ -406,21 +312,6 @@ BUILT_IN_TOOLS_METADATA = [
         "category": "cicd",
         "required_integrations": ["github"],
     },
-    # Elasticsearch tools
-    {
-        "id": "search_logs",
-        "name": "Search Logs",
-        "description": "Search logs in Elasticsearch",
-        "category": "observability",
-        "required_integrations": ["elasticsearch"],
-    },
-    {
-        "id": "aggregate_errors_by_field",
-        "name": "Aggregate Errors By Field",
-        "description": "Aggregate errors by field in Elasticsearch",
-        "category": "observability",
-        "required_integrations": ["elasticsearch"],
-    },
     # Log Analysis tools (no integration - analyze provided log data)
     {
         "id": "get_log_statistics",
@@ -513,73 +404,6 @@ BUILT_IN_TOOLS_METADATA = [
         "description": "Find post-mortem documents",
         "category": "other",
         "required_integrations": ["confluence"],
-    },
-    # Sourcegraph tools
-    {
-        "id": "search_sourcegraph",
-        "name": "Search Sourcegraph",
-        "description": "Search code using Sourcegraph",
-        "category": "other",
-        "required_integrations": ["sourcegraph"],
-    },
-    # Datadog tools
-    {
-        "id": "query_datadog_metrics",
-        "name": "Query Datadog Metrics",
-        "description": "Query metrics from Datadog",
-        "category": "observability",
-        "required_integrations": ["datadog"],
-    },
-    {
-        "id": "search_datadog_logs",
-        "name": "Search Datadog Logs",
-        "description": "Search logs in Datadog",
-        "category": "observability",
-        "required_integrations": ["datadog"],
-    },
-    {
-        "id": "get_service_apm_metrics",
-        "name": "Get Service APM Metrics",
-        "description": "Get APM metrics for a service from Datadog",
-        "category": "observability",
-        "required_integrations": ["datadog"],
-    },
-    # New Relic tools
-    {
-        "id": "query_newrelic_nrql",
-        "name": "Query NewRelic NRQL",
-        "description": "Run NRQL queries in New Relic",
-        "category": "observability",
-        "required_integrations": ["newrelic"],
-    },
-    {
-        "id": "get_apm_summary",
-        "name": "Get APM Summary",
-        "description": "Get APM summary from New Relic",
-        "category": "observability",
-        "required_integrations": ["newrelic"],
-    },
-    # Google Docs tools
-    {
-        "id": "read_google_doc",
-        "name": "Read Google Doc",
-        "description": "Read a Google Doc",
-        "category": "other",
-        "required_integrations": ["google_docs"],
-    },
-    {
-        "id": "search_google_drive",
-        "name": "Search Google Drive",
-        "description": "Search for files in Google Drive",
-        "category": "other",
-        "required_integrations": ["google_docs"],
-    },
-    {
-        "id": "list_folder_contents",
-        "name": "List Folder Contents",
-        "description": "List contents of a Google Drive folder",
-        "category": "other",
-        "required_integrations": ["google_docs"],
     },
     # Git tools (local, no integration required)
     {
@@ -1066,134 +890,6 @@ BUILT_IN_TOOLS_METADATA = [
         "category": "other",
         "required_integrations": [],
     },
-    # Snowflake tools
-    {
-        "id": "get_snowflake_schema",
-        "name": "Get Snowflake Schema",
-        "description": "Get Snowflake database schema",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "run_snowflake_query",
-        "name": "Run Snowflake Query",
-        "description": "Run a query in Snowflake",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "get_recent_incidents",
-        "name": "Get Recent Incidents",
-        "description": "Get recent incidents from Snowflake",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "get_incident_customer_impact",
-        "name": "Get Incident Customer Impact",
-        "description": "Get customer impact of incidents",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "get_deployment_incidents",
-        "name": "Get Deployment Incidents",
-        "description": "Get incidents related to deployments",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "get_customer_info",
-        "name": "Get Customer Info",
-        "description": "Get customer information from Snowflake",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "get_incident_timeline",
-        "name": "Get Incident Timeline",
-        "description": "Get incident timeline from Snowflake",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "search_incidents_by_service",
-        "name": "Search Incidents By Service",
-        "description": "Search incidents by service name in Snowflake",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "snowflake_list_tables",
-        "name": "Snowflake List Tables",
-        "description": "List all tables in a Snowflake database/schema",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "snowflake_describe_table",
-        "name": "Snowflake Describe Table",
-        "description": "Get column details for a Snowflake table",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    {
-        "id": "snowflake_bulk_export",
-        "name": "Snowflake Bulk Export",
-        "description": "Export query results to Snowflake stage for bulk data transfer",
-        "category": "data",
-        "required_integrations": ["snowflake"],
-    },
-    # Coralogix tools
-    {
-        "id": "search_coralogix_logs",
-        "name": "Search Coralogix Logs",
-        "description": "Search logs in Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "get_coralogix_error_logs",
-        "name": "Get Coralogix Error Logs",
-        "description": "Get error logs from Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "get_coralogix_alerts",
-        "name": "Get Coralogix Alerts",
-        "description": "Get alerts from Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "query_coralogix_metrics",
-        "name": "Query Coralogix Metrics",
-        "description": "Query metrics in Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "search_coralogix_traces",
-        "name": "Search Coralogix Traces",
-        "description": "Search traces in Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "get_coralogix_service_health",
-        "name": "Get Coralogix Service Health",
-        "description": "Get service health from Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
-    {
-        "id": "list_coralogix_services",
-        "name": "List Coralogix Services",
-        "description": "List services in Coralogix",
-        "category": "observability",
-        "required_integrations": ["coralogix"],
-    },
     # PagerDuty tools
     {
         "id": "pagerduty_get_incident",
@@ -1258,156 +954,6 @@ BUILT_IN_TOOLS_METADATA = [
         "category": "analytics",
         "required_integrations": ["pagerduty"],
     },
-    # Incident.io tools
-    {
-        "id": "incidentio_list_incidents",
-        "name": "Incident.io List Incidents",
-        "description": "List incidents from Incident.io",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_get_incident",
-        "name": "Incident.io Get Incident",
-        "description": "Get details of an Incident.io incident",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_get_incident_updates",
-        "name": "Incident.io Get Incident Updates",
-        "description": "Get timeline updates for an incident",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_list_incidents_by_date_range",
-        "name": "Incident.io List Incidents By Date Range",
-        "description": "List incidents within a date range with MTTR metrics",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_list_severities",
-        "name": "Incident.io List Severities",
-        "description": "List configured severity levels",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_list_incident_types",
-        "name": "Incident.io List Incident Types",
-        "description": "List configured incident types",
-        "category": "incident",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_get_alert_analytics",
-        "name": "Incident.io Get Alert Analytics",
-        "description": "Get alert analytics from Incident.io alerts",
-        "category": "analytics",
-        "required_integrations": ["incidentio"],
-    },
-    {
-        "id": "incidentio_calculate_mttr",
-        "name": "Incident.io Calculate MTTR",
-        "description": "Calculate mean time to resolution for Incident.io",
-        "category": "analytics",
-        "required_integrations": ["incidentio"],
-    },
-    # Opsgenie tools
-    {
-        "id": "opsgenie_list_alerts",
-        "name": "Opsgenie List Alerts",
-        "description": "List Opsgenie alerts with filters",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_get_alert",
-        "name": "Opsgenie Get Alert",
-        "description": "Get details of an Opsgenie alert",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_get_alert_logs",
-        "name": "Opsgenie Get Alert Logs",
-        "description": "Get log entries for an alert",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_list_alerts_by_date_range",
-        "name": "Opsgenie List Alerts By Date Range",
-        "description": "List alerts within a date range with MTTA/MTTR metrics",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_list_services",
-        "name": "Opsgenie List Services",
-        "description": "List all Opsgenie services",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_list_teams",
-        "name": "Opsgenie List Teams",
-        "description": "List all Opsgenie teams",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_get_on_call",
-        "name": "Opsgenie Get On-Call",
-        "description": "Get current on-call users",
-        "category": "incident",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_get_alert_analytics",
-        "name": "Opsgenie Get Alert Analytics",
-        "description": "Get detailed alert analytics for fatigue analysis",
-        "category": "analytics",
-        "required_integrations": ["opsgenie"],
-    },
-    {
-        "id": "opsgenie_calculate_mttr",
-        "name": "Opsgenie Calculate MTTR",
-        "description": "Calculate mean time to resolution for Opsgenie",
-        "category": "analytics",
-        "required_integrations": ["opsgenie"],
-    },
-    # BigQuery tools
-    {
-        "id": "bigquery_query",
-        "name": "BigQuery Query",
-        "description": "Execute SQL query on BigQuery",
-        "category": "data",
-        "required_integrations": ["bigquery"],
-    },
-    {
-        "id": "bigquery_list_datasets",
-        "name": "BigQuery List Datasets",
-        "description": "List all BigQuery datasets",
-        "category": "data",
-        "required_integrations": ["bigquery"],
-    },
-    {
-        "id": "bigquery_list_tables",
-        "name": "BigQuery List Tables",
-        "description": "List tables in a BigQuery dataset",
-        "category": "data",
-        "required_integrations": ["bigquery"],
-    },
-    {
-        "id": "bigquery_get_table_schema",
-        "name": "BigQuery Get Table Schema",
-        "description": "Get schema of a BigQuery table",
-        "category": "data",
-        "required_integrations": ["bigquery"],
-    },
     # PostgreSQL tools (works with RDS, Aurora, standard PostgreSQL)
     {
         "id": "postgres_list_tables",
@@ -1429,35 +975,6 @@ BUILT_IN_TOOLS_METADATA = [
         "description": "Execute SQL query against PostgreSQL and return results",
         "category": "data",
         "required_integrations": ["postgresql"],
-    },
-    # Splunk tools
-    {
-        "id": "splunk_search",
-        "name": "Splunk Search",
-        "description": "Execute SPL search query in Splunk",
-        "category": "observability",
-        "required_integrations": ["splunk"],
-    },
-    {
-        "id": "splunk_list_indexes",
-        "name": "Splunk List Indexes",
-        "description": "List all Splunk indexes",
-        "category": "observability",
-        "required_integrations": ["splunk"],
-    },
-    {
-        "id": "splunk_get_saved_searches",
-        "name": "Splunk Get Saved Searches",
-        "description": "Get Splunk saved searches and alerts",
-        "category": "observability",
-        "required_integrations": ["splunk"],
-    },
-    {
-        "id": "splunk_get_alerts",
-        "name": "Splunk Get Alerts",
-        "description": "Get triggered Splunk alerts",
-        "category": "observability",
-        "required_integrations": ["splunk"],
     },
     # Microsoft Teams tools
     {
@@ -1510,234 +1027,6 @@ BUILT_IN_TOOLS_METADATA = [
         "category": "github",
         "required_integrations": ["github"],
     },
-    # GitLab tools
-    {
-        "id": "gitlab_list_projects",
-        "name": "GitLab List Projects",
-        "description": "List GitLab projects",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_project",
-        "name": "GitLab Get Project",
-        "description": "Get GitLab project details",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_search_projects",
-        "name": "GitLab Search Projects",
-        "description": "Search GitLab projects by name",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_pipelines",
-        "name": "GitLab Get Pipelines",
-        "description": "Get GitLab CI/CD pipelines",
-        "category": "cicd",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_pipeline_jobs",
-        "name": "GitLab Get Pipeline Jobs",
-        "description": "Get jobs for GitLab pipeline",
-        "category": "cicd",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_merge_requests",
-        "name": "GitLab Get Merge Requests",
-        "description": "List GitLab merge requests",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_mr",
-        "name": "GitLab Get MR Details",
-        "description": "Get detailed merge request info",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_mr_changes",
-        "name": "GitLab Get MR Changes",
-        "description": "Get file changes in a merge request",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_add_mr_comment",
-        "name": "GitLab Add MR Comment",
-        "description": "Add comment to GitLab merge request",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_list_commits",
-        "name": "GitLab List Commits",
-        "description": "List commits in a GitLab project",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_commit",
-        "name": "GitLab Get Commit",
-        "description": "Get detailed commit information",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_list_branches",
-        "name": "GitLab List Branches",
-        "description": "List branches in a GitLab project",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_list_tags",
-        "name": "GitLab List Tags",
-        "description": "List tags in a GitLab project",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_list_issues",
-        "name": "GitLab List Issues",
-        "description": "List issues in a GitLab project",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_get_issue",
-        "name": "GitLab Get Issue",
-        "description": "Get detailed issue information",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    {
-        "id": "gitlab_create_issue",
-        "name": "GitLab Create Issue",
-        "description": "Create an issue in a GitLab project",
-        "category": "scm",
-        "required_integrations": ["gitlab"],
-    },
-    # AWS CodePipeline tools
-    {
-        "id": "codepipeline_list_pipelines",
-        "name": "CodePipeline List Pipelines",
-        "description": "List AWS CodePipeline pipelines",
-        "category": "cicd",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "codepipeline_get_pipeline_state",
-        "name": "CodePipeline Get Pipeline State",
-        "description": "Get AWS CodePipeline state",
-        "category": "cicd",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "codepipeline_get_execution_history",
-        "name": "CodePipeline Get Execution History",
-        "description": "Get CodePipeline execution history",
-        "category": "cicd",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "codepipeline_start_execution",
-        "name": "CodePipeline Start Execution",
-        "description": "Trigger AWS CodePipeline execution",
-        "category": "cicd",
-        "required_integrations": ["aws"],
-    },
-    {
-        "id": "codepipeline_get_failed_actions",
-        "name": "CodePipeline Get Failed Actions",
-        "description": "Get failed CodePipeline actions",
-        "category": "cicd",
-        "required_integrations": ["aws"],
-    },
-    # GCP tools
-    {
-        "id": "gcp_list_compute_instances",
-        "name": "GCP List Compute Instances",
-        "description": "List GCP Compute Engine instances",
-        "category": "cloud",
-        "required_integrations": ["gcp"],
-    },
-    {
-        "id": "gcp_list_gke_clusters",
-        "name": "GCP List GKE Clusters",
-        "description": "List Google Kubernetes Engine clusters",
-        "category": "kubernetes",
-        "required_integrations": ["gcp"],
-    },
-    {
-        "id": "gcp_list_cloud_functions",
-        "name": "GCP List Cloud Functions",
-        "description": "List GCP Cloud Functions",
-        "category": "cloud",
-        "required_integrations": ["gcp"],
-    },
-    {
-        "id": "gcp_list_cloud_sql_instances",
-        "name": "GCP List Cloud SQL Instances",
-        "description": "List GCP Cloud SQL instances",
-        "category": "data",
-        "required_integrations": ["gcp"],
-    },
-    {
-        "id": "gcp_get_project_metadata",
-        "name": "GCP Get Project Metadata",
-        "description": "Get GCP project metadata",
-        "category": "cloud",
-        "required_integrations": ["gcp"],
-    },
-    # Sentry tools
-    {
-        "id": "sentry_list_issues",
-        "name": "Sentry List Issues",
-        "description": "List Sentry error issues",
-        "category": "observability",
-        "required_integrations": ["sentry"],
-    },
-    {
-        "id": "sentry_get_issue_details",
-        "name": "Sentry Get Issue Details",
-        "description": "Get details of a Sentry issue",
-        "category": "observability",
-        "required_integrations": ["sentry"],
-    },
-    {
-        "id": "sentry_update_issue_status",
-        "name": "Sentry Update Issue Status",
-        "description": "Update Sentry issue status",
-        "category": "observability",
-        "required_integrations": ["sentry"],
-    },
-    {
-        "id": "sentry_list_projects",
-        "name": "Sentry List Projects",
-        "description": "List Sentry projects",
-        "category": "observability",
-        "required_integrations": ["sentry"],
-    },
-    {
-        "id": "sentry_get_project_stats",
-        "name": "Sentry Get Project Stats",
-        "description": "Get Sentry project statistics",
-        "category": "analytics",
-        "required_integrations": ["sentry"],
-    },
-    {
-        "id": "sentry_list_releases",
-        "name": "Sentry List Releases",
-        "description": "List Sentry releases",
-        "category": "observability",
-        "required_integrations": ["sentry"],
-    },
     # Jira tools
     {
         "id": "jira_create_issue",
@@ -1787,107 +1076,6 @@ BUILT_IN_TOOLS_METADATA = [
         "description": "Search Jira issues using JQL query language",
         "category": "other",
         "required_integrations": ["jira"],
-    },
-    # Linear tools
-    {
-        "id": "linear_create_issue",
-        "name": "Linear Create Issue",
-        "description": "Create a Linear issue",
-        "category": "other",
-        "required_integrations": ["linear"],
-    },
-    {
-        "id": "linear_create_project",
-        "name": "Linear Create Project",
-        "description": "Create a Linear project",
-        "category": "other",
-        "required_integrations": ["linear"],
-    },
-    {
-        "id": "linear_get_issue",
-        "name": "Linear Get Issue",
-        "description": "Get details of a Linear issue",
-        "category": "other",
-        "required_integrations": ["linear"],
-    },
-    {
-        "id": "linear_list_issues",
-        "name": "Linear List Issues",
-        "description": "List Linear issues",
-        "category": "other",
-        "required_integrations": ["linear"],
-    },
-    # Notion tools
-    {
-        "id": "notion_create_page",
-        "name": "Notion Create Page",
-        "description": "Create a Notion page",
-        "category": "other",
-        "required_integrations": ["notion"],
-    },
-    {
-        "id": "notion_write_content",
-        "name": "Notion Write Content",
-        "description": "Write content to a Notion page",
-        "category": "other",
-        "required_integrations": ["notion"],
-    },
-    {
-        "id": "notion_search",
-        "name": "Notion Search",
-        "description": "Search Notion pages",
-        "category": "other",
-        "required_integrations": ["notion"],
-    },
-    # MySQL tools
-    {
-        "id": "mysql_list_tables",
-        "name": "MySQL List Tables",
-        "description": "List all tables in a MySQL database",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_describe_table",
-        "name": "MySQL Describe Table",
-        "description": "Get column details for a MySQL table",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_execute_query",
-        "name": "MySQL Execute Query",
-        "description": "Execute SQL query against MySQL",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_show_processlist",
-        "name": "MySQL Show Processlist",
-        "description": "Show current MySQL processes and connections",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_show_slave_status",
-        "name": "MySQL Show Slave Status",
-        "description": "Show MySQL replication status",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_show_engine_status",
-        "name": "MySQL Show Engine Status",
-        "description": "Show MySQL InnoDB engine status",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "mysql_get_table_locks",
-        "name": "MySQL Get Table Locks",
-        "description": "Get current table locks and lock waits",
-        "category": "data",
-        "required_integrations": ["mysql"],
     },
     # Extended PostgreSQL tools
     {
@@ -2289,41 +1477,6 @@ BUILT_IN_TOOLS_METADATA = [
         "required_integrations": [],
     },
     # Online schema change tools
-    {
-        "id": "gh_ost_run",
-        "name": "gh-ost Run",
-        "description": "Run gh-ost online schema change for MySQL",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "gh_ost_cut_over",
-        "name": "gh-ost Cut Over",
-        "description": "Trigger gh-ost cut-over (table swap)",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "gh_ost_panic",
-        "name": "gh-ost Panic",
-        "description": "Emergency abort gh-ost operation",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "pt_online_schema_change",
-        "name": "pt-online-schema-change",
-        "description": "Run Percona Toolkit online schema change for MySQL",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
-    {
-        "id": "osc_estimate_time",
-        "name": "OSC Estimate Time",
-        "description": "Estimate time for online schema change",
-        "category": "data",
-        "required_integrations": ["mysql"],
-    },
     # Observability Advisor tools
     {
         "id": "compute_metric_baseline",
@@ -2342,7 +1495,7 @@ BUILT_IN_TOOLS_METADATA = [
     {
         "id": "generate_alert_rules",
         "name": "Generate Alert Rules",
-        "description": "Generate alert rules in Prometheus YAML, Datadog JSON, CloudWatch JSON, or proposal document format",
+        "description": "Generate alert rules in Prometheus YAML or proposal document format",
         "category": "observability",
         "required_integrations": [],
     },

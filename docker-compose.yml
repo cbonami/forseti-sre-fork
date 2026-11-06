@@ -175,8 +175,6 @@ services:
       - NEO4J_USERNAME=${NEO4J_USERNAME:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-localdev}
       - NEO4J_DATABASE=${NEO4J_DATABASE:-neo4j}
-      # Coralogix config
-      - CORALOGIX_DOMAIN=${CORALOGIX_DOMAIN:-}
       # Skills filtering
       # Default empty so team-level skills config (skills.enabled/disabled, set
       # via the web UI) governs which skills load. Set ENABLED_SKILLS=all (or a
@@ -220,8 +218,6 @@ services:
       - AWS_PROFILE=${AWS_PROFILE:-default}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      # Bitbucket (vcs-bitbucket skill): BKT_* vars come from env_file (.env) above.
-      # Do not add empty BKT_PROJECT/BKT_REPO defaults here — unset is better than "".
       # GitHub (vcs-github skill): GITHUB_TOKEN / GITHUB_REPOSITORY come from env_file (.env) above.
     depends_on:
       config-service:
@@ -252,7 +248,7 @@ services:
       # `kubectl config use-context`). See env block above for more.
       - ${HOME}/.aws:/home/agent/.aws
       - ${HOME}/.kube:/home/agent/.kube:ro
-      # Jenkins / ArgoCD / Bitbucket: set credentials in repo root .env (env_file above).
+      # ArgoCD: set credentials in repo root .env (env_file above).
       # Argo CD CLI session (after host `argocd login`)
       - ${HOME}/.config/argocd:/home/agent/.config/argocd
     mem_limit: 2g

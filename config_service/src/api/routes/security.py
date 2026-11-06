@@ -214,11 +214,6 @@ async def list_integrations(
     if not integrations:
         default_integrations = [
             {
-                "integration_id": "slack",
-                "display_name": "Slack",
-                "status": "not_configured",
-            },
-            {
                 "integration_id": "openai",
                 "display_name": "OpenAI",
                 "status": "not_configured",
@@ -226,11 +221,6 @@ async def list_integrations(
             {
                 "integration_id": "kubernetes",
                 "display_name": "Kubernetes",
-                "status": "not_configured",
-            },
-            {
-                "integration_id": "datadog",
-                "display_name": "Datadog",
                 "status": "not_configured",
             },
             {
@@ -348,34 +338,7 @@ async def test_integration(
     config = body.config
 
     try:
-        if integration_id == "slack":
-            # Test Slack API
-            bot_token = config.get("bot_token", "")
-            if not bot_token:
-                return IntegrationTestResponse(
-                    success=False, message="Bot token is required"
-                )
-
-            async with httpx.AsyncClient() as client:
-                res = await client.get(
-                    "https://slack.com/api/auth.test",
-                    headers={"Authorization": f"Bearer {bot_token}"},
-                    timeout=10,
-                )
-                data = res.json()
-                if data.get("ok"):
-                    return IntegrationTestResponse(
-                        success=True,
-                        message=f"Connected to workspace: {data.get('team', 'Unknown')}",
-                        details={"team": data.get("team"), "user": data.get("user")},
-                    )
-                else:
-                    return IntegrationTestResponse(
-                        success=False,
-                        message=f"Slack error: {data.get('error', 'Unknown error')}",
-                    )
-
-        elif integration_id == "openai":
+        if integration_id == "openai":
             # Test OpenAI API
             api_key = config.get("api_key", "")
             if not api_key:
@@ -433,40 +396,6 @@ async def test_integration(
                 elif res.status_code == 401:
                     return IntegrationTestResponse(
                         success=False, message="Invalid token"
-                    )
-                else:
-                    return IntegrationTestResponse(
-                        success=False, message=f"API error: {res.status_code}"
-                    )
-
-        elif integration_id == "datadog":
-            # Test Datadog API
-            api_key = config.get("api_key", "")
-            app_key = config.get("app_key", "")
-            site = config.get("site", "datadoghq.com")
-
-            if not api_key or not app_key:
-                return IntegrationTestResponse(
-                    success=False, message="API key and App key are required"
-                )
-
-            async with httpx.AsyncClient() as client:
-                res = await client.get(
-                    f"https://api.{site}/api/v1/validate",
-                    headers={
-                        "DD-API-KEY": api_key,
-                        "DD-APPLICATION-KEY": app_key,
-                    },
-                    timeout=10,
-                )
-                if res.status_code == 200:
-                    return IntegrationTestResponse(
-                        success=True,
-                        message="Datadog connection verified",
-                    )
-                elif res.status_code == 403:
-                    return IntegrationTestResponse(
-                        success=False, message="Invalid API or App key"
                     )
                 else:
                     return IntegrationTestResponse(

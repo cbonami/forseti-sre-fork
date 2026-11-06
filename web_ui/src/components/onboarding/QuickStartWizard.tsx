@@ -259,7 +259,6 @@ function StepHowItWorks() {
           {/* Sub-agents */}
           <div className="flex flex-wrap justify-center gap-2 mt-3">
             <SubAgentChip label="K8s" />
-            <SubAgentChip label="AWS" />
             <SubAgentChip label="Metrics" />
             <SubAgentChip label="Logs" />
             <SubAgentChip label="GitHub" />
@@ -272,7 +271,7 @@ function StepHowItWorks() {
           <strong className="text-stone-900 dark:text-white">1.</strong> The Planner receives your incident and determines the investigation strategy
         </p>
         <p>
-          <strong className="text-stone-900 dark:text-white">2.</strong> Specialized agents query Kubernetes, AWS, Grafana, logs, and code changes
+          <strong className="text-stone-900 dark:text-white">2.</strong> Specialized agents query Kubernetes, Grafana, logs, and code changes
         </p>
         <p>
           <strong className="text-stone-900 dark:text-white">3.</strong> Findings are synthesized into root cause analysis with recommendations
@@ -305,7 +304,7 @@ function StepConnectSystems({ onNavigateAway }: { onNavigateAway: () => void }) 
         />
         <IntegrationItem
           icon={<Bell className="w-5 h-5" />}
-          name="PagerDuty / Incident.io"
+          name="PagerDuty"
           description="Auto-triggered when incidents are created"
         />
         <IntegrationItem
@@ -353,17 +352,17 @@ function StepConfigureAgents({ onIntegrationsClick, onAgentConfigClick }: { onIn
         <ConfigSection
           icon={<Wrench className="w-5 h-5" />}
           title="Integrations & Tools"
-          description="Connect Grafana, Datadog, AWS, Kubernetes to unlock investigation capabilities. More integrations = better investigations."
+          description="Connect Grafana, Loki, Kubernetes, GitHub to unlock investigation capabilities. More integrations = better investigations."
         />
         <ConfigSection
           icon={<MessageSquare className="w-5 h-5" />}
           title="Agent Prompts"
-          description='Add team context to system prompts: "We use EKS on AWS, primary services are checkout-service and payment-service..."'
+          description='Add team context to system prompts: "We use AKS, primary services are checkout-service and payment-service..."'
         />
         <ConfigSection
           icon={<Bot className="w-5 h-5" />}
           title="Enable/Disable Agents"
-          description="Turn off agents you don't need (e.g., disable AWS agent if you're on GCP). Add MCP servers for custom tools."
+          description="Turn off agents you don't need (e.g., disable the coding agent if you only need diagnosis). Add MCP servers for custom tools."
         />
       </div>
 
@@ -420,7 +419,7 @@ function StepTryItNow({ onNavigateAway }: { onNavigateAway: () => void }) {
       <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-100 dark:border-amber-900/40">
         <p className="text-sm text-amber-800 dark:text-amber-200">
           <strong>Note:</strong> Investigation quality depends on your configured integrations.
-          Without Grafana/K8s/AWS connected, the agent can reason but can&apos;t query real systems.
+          Without Grafana/K8s connected, the agent can reason but can&apos;t query real systems.
         </p>
       </div>
 

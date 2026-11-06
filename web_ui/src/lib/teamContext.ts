@@ -11,13 +11,13 @@ export const SUGGESTED_SECTIONS: Array<{ id: string; title: string; hint: string
     title: 'Source Control',
     hint: 'Which VCS and repos should the agent use?',
     placeholder:
-      '- **Primary VCS:** (your org default, e.g. Bitbucket or GitHub)\n- Do NOT search alternate VCS unless the ticket names it.',
+      '- **Primary VCS:** (your org default, e.g. GitHub)\n- Do NOT search alternate VCS unless the ticket names it.',
   },
   {
     id: 'infrastructure',
     title: 'Infrastructure',
     hint: 'Clouds, clusters, regions, namespaces, observability',
-    placeholder: 'EKS cluster, AWS account, default namespaces...',
+    placeholder: 'AKS cluster, default namespaces...',
   },
   {
     id: 'environments',

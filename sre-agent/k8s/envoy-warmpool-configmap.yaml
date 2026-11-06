@@ -73,17 +73,6 @@ data:
                       cluster: credential_resolver_llm
                       timeout: 0s
                       idle_timeout: 0s
-                  # Coralogix API paths
-                  - match:
-                      prefix: "/api/v1/dataprime/"
-                    route:
-                      cluster: coralogix_us2
-                      auto_host_rewrite: true
-                  - match:
-                      prefix: "/api/v1/query"
-                    route:
-                      cluster: coralogix_us2
-                      auto_host_rewrite: true
 
                 # Direct host routing -> LLM proxy (for HTTP_PROXY mode if used)
                 - name: anthropic
@@ -97,17 +86,6 @@ data:
                       cluster: credential_resolver_llm
                       timeout: 0s
                       idle_timeout: 0s
-
-                - name: coralogix_us2
-                  domains:
-                  - "api.us2.coralogix.com"
-                  - "api.us2.coralogix.com:443"
-                  routes:
-                  - match:
-                      prefix: "/"
-                    route:
-                      cluster: coralogix_us2
-                      auto_host_rewrite: true
 
                 # Passthrough for unmapped domains
                 - name: passthrough
@@ -227,26 +205,6 @@ data:
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
             sni: api.anthropic.com
-
-      # Coralogix US2
-      - name: coralogix_us2
-        type: LOGICAL_DNS
-        dns_lookup_family: V4_ONLY
-        lb_policy: ROUND_ROBIN
-        load_assignment:
-          cluster_name: coralogix_us2
-          endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: api.us2.coralogix.com
-                    port_value: 443
-        transport_socket:
-          name: envoy.transport_sockets.tls
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-            sni: api.us2.coralogix.com
 
       # Passthrough cluster (placeholder)
       - name: passthrough_cluster

@@ -135,7 +135,7 @@ ruff check .                              # Lint
 4. **Commit with clear messages**
 
 ```bash
-git commit -m "feat: add alert correlation for Datadog"
+git commit -m "feat: add alert correlation for Alertmanager"
 ```
 
 Use [conventional commits](https://www.conventionalcommits.org/):

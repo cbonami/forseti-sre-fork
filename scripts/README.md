@@ -46,7 +46,7 @@ Master test runner combining all tests.
 
 ### `fault_analysis.py`
 Comprehensive fault analysis for the otel-demo stack on EKS. For each flagd fault, it:
-1. Checks connectivity to Prometheus, OpenSearch, and Jaeger
+1. Checks connectivity to Prometheus, the log backend, and Jaeger
 2. Injects the fault via kubectl ConfigMap patch
 3. Waits for symptoms to appear (configurable via `--wait`, default 90s)
 4. Queries all observability backends for detectable signals

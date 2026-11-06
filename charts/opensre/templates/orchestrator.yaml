@@ -92,13 +92,6 @@ spec:
                   name: {{ .Values.externalSecrets.contract.pagerduty.secretName | quote }}
                   key: {{ .Values.externalSecrets.contract.pagerduty.webhookSecretKey | quote }}
             {{- end }}
-            {{- if .Values.externalSecrets.contract.incidentio.enabled }}
-            - name: INCIDENTIO_WEBHOOK_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.externalSecrets.contract.incidentio.secretName | quote }}
-                  key: {{ .Values.externalSecrets.contract.incidentio.webhookSecretKey | quote }}
-            {{- end }}
             {{- if .Values.externalSecrets.contract.recall.enabled }}
             - name: RECALL_API_KEY
               valueFrom:
@@ -147,15 +140,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.externalSecrets.contract.teams.secretName | quote }}
                   key: {{ .Values.externalSecrets.contract.teams.tenantIdKey | quote }}
-            {{- end }}
-            {{- if .Values.externalSecrets.vercel.enabled }}
-            - name: VERCEL_WEBHOOK_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: opensre-vercel
-                  key: webhook_secret
-            - name: VERCEL_VERIFY
-              value: {{ .Values.vercelVerify | default "" | quote }}
             {{- end }}
             # K8s namespace for CronJobs and dedicated deployments
             - name: K8S_NAMESPACE

@@ -14,7 +14,7 @@
 
 ## Key Features
 
-- 46 production investigation skills (Datadog, Grafana, PagerDuty, Elasticsearch, K8s, AWS)
+- 22 investigation skills (Grafana Loki/Prometheus, Jaeger, Kubernetes, GitHub, Jira, Confluence, Argo CD)
 - Episodic memory system that learns from every investigation
 - Neo4j knowledge graph for service topology and blast radius analysis
 - Direct Anthropic by default; optional multi-provider LLM support via LiteLLM (OpenAI, Gemini, DeepSeek, Mistral, Ollama)

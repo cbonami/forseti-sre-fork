@@ -195,7 +195,7 @@ def get_skills_by_integration(integration_id: str) -> List[Dict[str, Any]]:
     Get all skills that require a specific integration.
 
     Args:
-        integration_id: The integration ID (e.g., "coralogix", "kubernetes", "pagerduty")
+        integration_id: The integration ID (e.g., "grafana", "kubernetes", "pagerduty")
 
     Returns:
         List of skill metadata dicts that require this integration

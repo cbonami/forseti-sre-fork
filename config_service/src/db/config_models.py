@@ -199,7 +199,7 @@ class IntegrationSchema(Base):
     """
     Global integration schema definitions (not per-org).
 
-    Defines available integrations like Coralogix, Snowflake, GitHub, etc.
+    Defines available integrations like Grafana, GitHub, Kubernetes, etc.
     Each integration has a schema that describes what fields it needs.
     Actual credential values are stored in NodeConfiguration.integrations.
     """

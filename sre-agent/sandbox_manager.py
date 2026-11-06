@@ -232,17 +232,6 @@ static_resources:
                   cluster: credential_resolver_llm
                   timeout: 0s
                   idle_timeout: 0s
-              # Coralogix API paths
-              - match:
-                  prefix: "/api/v1/dataprime/"
-                route:
-                  cluster: coralogix_us2
-                  auto_host_rewrite: true
-              - match:
-                  prefix: "/api/v1/query"
-                route:
-                  cluster: coralogix_us2
-                  auto_host_rewrite: true
 
             # Direct host routing → LLM proxy (for HTTP_PROXY mode if used)
             - name: anthropic
@@ -256,17 +245,6 @@ static_resources:
                   cluster: credential_resolver_llm
                   timeout: 0s
                   idle_timeout: 0s
-
-            - name: coralogix_us2
-              domains:
-              - "api.us2.coralogix.com"
-              - "api.us2.coralogix.com:443"
-              routes:
-              - match:
-                  prefix: "/"
-                route:
-                  cluster: coralogix_us2
-                  auto_host_rewrite: true
 
             # Passthrough for unmapped domains
             - name: passthrough
@@ -424,26 +402,6 @@ static_resources:
       typed_config:
         "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
         sni: api.anthropic.com
-
-  # Coralogix US2
-  - name: coralogix_us2
-    type: LOGICAL_DNS
-    dns_lookup_family: V4_ONLY
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: coralogix_us2
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: api.us2.coralogix.com
-                port_value: 443
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        sni: api.us2.coralogix.com
 
   # Passthrough cluster (placeholder)
   - name: passthrough_cluster
@@ -664,16 +622,10 @@ static_resources:
                                     # NOTE: Gemini and OpenAI API keys are NOT mounted here.
                                     # They are injected by credential-resolver's LLM proxy
                                     # (same as Anthropic). Sandboxes never see real LLM keys.
-                                    # Coralogix SDK: route API requests through proxy
-                                    # (proxy injects Authorization header for Coralogix)
-                                    {
-                                        "name": "CORALOGIX_BASE_URL",
-                                        "value": "http://localhost:8001",
-                                    },
                                     # Confluence SDK: route through credential-resolver's reverse proxy
                                     # (credential-resolver looks up URL + injects Basic auth)
                                     # Note: Confluence uses per-customer URLs (e.g., customer.atlassian.net)
-                                    # so we can't use Envoy's static routing like Anthropic/Coralogix
+                                    # so we can't use Envoy's static routing like Anthropic
                                     {
                                         "name": "CONFLUENCE_BASE_URL",
                                         "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/confluence",
@@ -683,10 +635,6 @@ static_resources:
                                     {
                                         "name": "GRAFANA_BASE_URL",
                                         "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/grafana",
-                                    },
-                                    {
-                                        "name": "ELASTICSEARCH_BASE_URL",
-                                        "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/elasticsearch",
                                     },
                                     {
                                         "name": "PROMETHEUS_BASE_URL",
@@ -699,14 +647,6 @@ static_resources:
                                     {
                                         "name": "GITHUB_BASE_URL",
                                         "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/github",
-                                    },
-                                    {
-                                        "name": "DATADOG_BASE_URL",
-                                        "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/datadog",
-                                    },
-                                    {
-                                        "name": "AMPLITUDE_BASE_URL",
-                                        "value": f"http://credential-resolver-svc.{cred_resolver_ns}.svc.cluster.local:8002/amplitude",
                                     },
                                     # Credential resolver URL for SDK-based integrations (AWS, Azure, GCP)
                                     # Scripts call /api/credentials/{id} to fetch creds at runtime

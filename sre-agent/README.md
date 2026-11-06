@@ -64,7 +64,7 @@ no SDK equivalent and are not configurable.
         "enabled": ["*"],
         "disabled": ["Write", "Edit"]
       },
-      "sub_agents": { "kubernetes": true, "aws": true }
+      "sub_agents": { "kubernetes": true, "metrics": true }
     },
     "kubernetes": {
       "enabled": true,
@@ -128,15 +128,15 @@ Integrations are implemented via **skills with Python scripts**, not MCP tools. 
 | Integration | What It Provides | Environment Variables |
 |-------------|------------------|----------------------|
 | **Kubernetes** | Pod inspection, logs, events, resource status | `KUBECONFIG` (auto-detected) |
-| **Coralogix** | Logs, metrics, traces, alerts (DataPrime queries) | `CORALOGIX_API_KEY`, `CORALOGIX_DOMAIN` |
-| **AWS** | EC2, CloudWatch, ECS (planned) | `AWS_REGION`, `AWS_ACCESS_KEY_ID` |
+| **Loki** | Logs (LogQL) | `LOKI_URL` |
+| **Grafana / Prometheus** | Dashboards, PromQL metrics | `GRAFANA_URL`, `GRAFANA_API_KEY`, `PROMETHEUS_URL` |
 | **Git** | Commit history, deployment correlation | Always available (uses local git) |
 
 ### How Integrations Work
 
 Each integration is a skill containing:
 - **SKILL.md** — methodology and reference documentation
-- **scripts/** — Python scripts that call the actual APIs (Kubernetes, Coralogix, etc.)
+- **scripts/** — Python scripts that call the actual APIs (Kubernetes, Loki, etc.)
 
 When the agent needs to use an integration:
 1. Reads the skill metadata (progressive disclosure)

@@ -810,7 +810,7 @@ export default function TeamToolsPage() {
     if (item.type === 'mcp_server') {
       customServers.push({ ...item, category: 'mcp' });
     } else if (hasRequiredConfig) {
-      // Configurable integration (Grafana, Kubernetes, Datadog, etc.)
+      // Configurable integration (Grafana, Kubernetes, etc.)
       integrations.push({
         ...item,
         description: integrationSchema?.description || item.description,
@@ -1077,7 +1077,7 @@ export default function TeamToolsPage() {
                   <span className="text-xs text-slate-500 ml-2">
                     {searchQuery ? `${filteredIntegrations.length} of ${integrations.length}` : `${integrations.length} connected`}
                   </span>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">API connections to external services (Datadog, Grafana, PagerDuty, etc.)</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">API connections to external services (Grafana, GitHub, PagerDuty, etc.)</p>
                 </div>
               </button>
               {expandedCategories.has('integration') && (

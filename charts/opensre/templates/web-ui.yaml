@@ -179,7 +179,7 @@ spec:
                   number: {{ .Values.services.configService.servicePort }}
           {{- end }}
           {{- if .Values.services.orchestrator.enabled }}
-          # Webhooks - route to orchestrator for Vercel, GitHub, PagerDuty, etc.
+          # Webhooks - route to orchestrator for GitHub, PagerDuty, etc.
           - path: /webhooks
             pathType: Prefix
             backend:

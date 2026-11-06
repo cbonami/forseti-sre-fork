@@ -2,7 +2,7 @@
 Integration Schemas API Routes
 
 Provides REST API for querying global integration schema definitions.
-These are the built-in integration types (Coralogix, Snowflake, GitHub, etc.)
+These are the built-in integration types (Grafana, GitHub, Kubernetes, etc.)
 that teams can configure with their actual credentials.
 """
 

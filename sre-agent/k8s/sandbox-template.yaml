@@ -42,36 +42,6 @@ spec:
               optional: true
         
         # Observability platforms
-        - name: CORALOGIX_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: coralogix-api-key
-              optional: true
-        - name: CORALOGIX_DOMAIN
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: coralogix-domain
-              optional: true
-        - name: DATADOG_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: datadog-api-key
-              optional: true
-        - name: DATADOG_APP_KEY
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: datadog-app-key
-              optional: true
-        - name: DATADOG_SITE
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: datadog-site
-              optional: true
         - name: PROMETHEUS_URL
           valueFrom:
             secretKeyRef:
@@ -96,61 +66,13 @@ spec:
               name: opensre-secrets
               key: grafana-api-key
               optional: true
-        - name: SENTRY_AUTH_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: sentry-auth-token
-              optional: true
-        - name: SENTRY_ORGANIZATION
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: sentry-organization
-              optional: true
-        - name: SENTRY_PROJECT
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: sentry-project
-              optional: true
         
         # Logging backends
-        - name: ELASTICSEARCH_URL
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: elasticsearch-url
-              optional: true
-        - name: ELASTICSEARCH_INDEX
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: elasticsearch-index
-              optional: true
         - name: LOKI_URL
           valueFrom:
             secretKeyRef:
               name: opensre-secrets
               key: loki-url
-              optional: true
-        - name: SPLUNK_HOST
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: splunk-host
-              optional: true
-        - name: SPLUNK_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: splunk-token
-              optional: true
-        - name: SPLUNK_PORT
-          valueFrom:
-            secretKeyRef:
-              name: opensre-secrets
-              key: splunk-port
               optional: true
         
         # Collaboration tools

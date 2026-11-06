@@ -72,7 +72,7 @@ We're building a community focused on learning and collaboration. Please:
 
 ## 🦊 About OpenSRE
 
-OpenSRE is an **AI-powered SRE** that helps teams investigate incidents, find root causes, and suggest fixes automatically. We integrate with your existing observability stack (Datadog, Grafana, Prometheus, etc.), infrastructure (Kubernetes, AWS, Azure, GCP), and collaboration tools (Slack, PagerDuty, GitHub).
+OpenSRE is an **AI-powered SRE** that helps teams investigate incidents, find root causes, and suggest fixes automatically. We integrate with your existing observability stack (Grafana, Loki, Prometheus, etc.), infrastructure (Kubernetes, Azure), and collaboration tools (Teams, Jira, Confluence, GitHub).
 
 **Open source** (Apache 2.0) and **production-ready** — deploy anywhere, no restrictions.
 

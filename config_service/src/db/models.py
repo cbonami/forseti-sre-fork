@@ -512,7 +512,7 @@ class Integration(Base):
     org_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     integration_id: Mapped[str] = mapped_column(
         String(64), primary_key=True
-    )  # slack, openai, k8s, datadog
+    )  # openai, k8s, github, grafana
 
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="not_configured"

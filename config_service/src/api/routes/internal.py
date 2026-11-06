@@ -38,13 +38,9 @@ _INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "")
 
 # Priority order for routing identifiers (highest priority first)
 ROUTING_PRIORITY = [
-    "incidentio_team_ids",
     "pagerduty_service_ids",
     "slack_channel_ids",
     "github_repos",
-    "vercel_project_ids",
-    "coralogix_team_names",
-    "incidentio_alert_source_ids",
     "services",
 ]
 
@@ -927,9 +923,7 @@ def _normalize_identifier(identifier_type: str, value: str) -> str:
     value = value.strip()
     # Lowercase for text-based identifiers
     if identifier_type in (
-        "coralogix_team_names",
         "github_repos",
-        "vercel_project_ids",
         "services",
     ):
         value = value.lower()
@@ -948,16 +942,12 @@ def _check_routing_match(
     # Map request identifier names to config field names
     # Request uses singular, config uses plural list
     field_map = {
-        "incidentio_team_id": "incidentio_team_ids",
         "pagerduty_service_id": "pagerduty_service_ids",
         "slack_channel_id": "slack_channel_ids",
         "slack_workspace_id": "slack_workspace_ids",
         "teams_channel_id": "teams_channel_ids",
         "google_chat_space_id": "google_chat_space_ids",
         "github_repo": "github_repos",
-        "vercel_project_id": "vercel_project_ids",
-        "coralogix_team_name": "coralogix_team_names",
-        "incidentio_alert_source_id": "incidentio_alert_source_ids",
         "service": "services",
     }
 
@@ -993,16 +983,12 @@ def lookup_routing(
 
     # Priority order for checking (maps request field name to internal field name)
     check_order = [
-        "incidentio_team_id",
         "pagerduty_service_id",
         "slack_channel_id",
         "slack_workspace_id",
         "teams_channel_id",
         "google_chat_space_id",
         "github_repo",
-        "vercel_project_id",
-        "coralogix_team_name",
-        "incidentio_alert_source_id",
         "service",
     ]
 

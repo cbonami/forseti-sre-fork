@@ -41,9 +41,9 @@ def apply_template_with_agent_replacement(
     This ensures templates define EXACTLY what agents you get, not additive merge.
 
     Example:
-        Built-in: [planner, aws, k8s, metrics, investigation, coding]
+        Built-in: [planner, kubernetes, metrics, log_analysis, github, coding, writeup]
         Template: [coordinator, joke_writer, news_searcher]
-        Result: 6 built-ins disabled + 3 template enabled = only 3 visible
+        Result: 7 built-ins disabled + 3 template enabled = only 3 visible
     """
     # Get built-in agent IDs
     default_agents = get_default_agent_config().get("agents", {})

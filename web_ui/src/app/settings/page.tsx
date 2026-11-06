@@ -68,10 +68,6 @@ interface IngestorSourceConfig {
     base_url: string;    // e.g., "https://company.atlassian.net"
     space_keys: string[]; // Space keys to include
   };
-  gdocs: {
-    enabled: boolean;
-    folder_ids: string[]; // Optional folder IDs to filter
-  };
   agent_traces: {
     enabled: boolean;
   };
@@ -87,10 +83,7 @@ interface DependencyDiscoveryConfig {
   enabled: boolean;
   schedule: string;
   sources: {
-    new_relic: boolean;
-    cloudwatch: boolean;
     prometheus: boolean;
-    datadog: boolean;
   };
 }
 
@@ -105,9 +98,6 @@ interface RoutingConfig {
   slack_channel_ids: string[];
   github_repos: string[];
   pagerduty_service_ids: string[];
-  incidentio_team_ids: string[];
-  incidentio_alert_source_ids: string[];
-  coralogix_team_names: string[];
   services: string[];
 }
 
@@ -213,7 +203,6 @@ export default function SettingsPage() {
     ingestors: {
       slack: { enabled: false, channels: [] },
       confluence: { enabled: false, base_url: '', space_keys: [] },
-      gdocs: { enabled: false, folder_ids: [] },
       agent_traces: { enabled: false },
     },
   });
@@ -221,10 +210,7 @@ export default function SettingsPage() {
     enabled: false,
     schedule: '0 */2 * * *',
     sources: {
-      new_relic: true,
-      cloudwatch: false,
-      prometheus: false,
-      datadog: false,
+      prometheus: true,
     },
   });
   const [correlationConfig, setCorrelationConfig] = useState<CorrelationConfig>({
@@ -241,9 +227,6 @@ export default function SettingsPage() {
     slack_channel_ids: [],
     github_repos: [],
     pagerduty_service_ids: [],
-    incidentio_team_ids: [],
-    incidentio_alert_source_ids: [],
-    coralogix_team_names: [],
     services: [],
   });
   const [routingLoading, setRoutingLoading] = useState(false);
@@ -414,10 +397,6 @@ export default function SettingsPage() {
                   base_url: ingestors.confluence?.base_url || '',
                   space_keys: ingestors.confluence?.space_keys || [],
                 },
-                gdocs: {
-                  enabled: parseIngestor('gdocs', false).enabled ?? false,
-                  folder_ids: ingestors.gdocs?.folder_ids || [],
-                },
                 agent_traces: {
                   enabled: parseIngestor('agent_traces', false).enabled ?? false,
                 },
@@ -431,10 +410,7 @@ export default function SettingsPage() {
               enabled: config.dependency_discovery.enabled ?? false,
               schedule: config.dependency_discovery.schedule ?? '0 */2 * * *',
               sources: {
-                new_relic: config.dependency_discovery.sources?.new_relic ?? true,
-                cloudwatch: config.dependency_discovery.sources?.cloudwatch ?? false,
-                prometheus: config.dependency_discovery.sources?.prometheus ?? false,
-                datadog: config.dependency_discovery.sources?.datadog ?? false,
+                prometheus: config.dependency_discovery.sources?.prometheus ?? true,
               },
             });
           }
@@ -454,9 +430,6 @@ export default function SettingsPage() {
               slack_channel_ids: config.routing.slack_channel_ids || [],
               github_repos: config.routing.github_repos || [],
               pagerduty_service_ids: config.routing.pagerduty_service_ids || [],
-              incidentio_team_ids: config.routing.incidentio_team_ids || [],
-              incidentio_alert_source_ids: config.routing.incidentio_alert_source_ids || [],
-              coralogix_team_names: config.routing.coralogix_team_names || [],
               services: config.routing.services || [],
             });
           }
@@ -770,9 +743,6 @@ export default function SettingsPage() {
                           >
                             <option value="github_repos">GitHub Repository</option>
                             <option value="pagerduty_service_ids">PagerDuty Service ID</option>
-                            <option value="incidentio_team_ids">Incident.io Team ID</option>
-                            <option value="incidentio_alert_source_ids">Incident.io Alert Source ID</option>
-                            <option value="coralogix_team_names">Coralogix Team Name</option>
                             <option value="services">Service Name</option>
                           </select>
                           <input
@@ -782,9 +752,6 @@ export default function SettingsPage() {
                             placeholder={
                               editingRoutingField === 'github_repos' ? 'owner/repo' :
                               editingRoutingField === 'pagerduty_service_ids' ? 'PXXXXXX' :
-                              editingRoutingField === 'incidentio_team_ids' ? '01KCSZ7FHG...' :
-                              editingRoutingField === 'incidentio_alert_source_ids' ? '01KEGMSPP...' :
-                              editingRoutingField === 'coralogix_team_names' ? 'team-name' :
                               'service-name'
                             }
                             className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
@@ -822,9 +789,6 @@ export default function SettingsPage() {
                       const allRoutes: { type: keyof RoutingConfig; label: string; value: string }[] = [];
                       routingConfig.github_repos.forEach(v => allRoutes.push({ type: 'github_repos', label: 'GitHub', value: v }));
                       routingConfig.pagerduty_service_ids.forEach(v => allRoutes.push({ type: 'pagerduty_service_ids', label: 'PagerDuty', value: v }));
-                      routingConfig.incidentio_team_ids.forEach(v => allRoutes.push({ type: 'incidentio_team_ids', label: 'Incident.io Team', value: v }));
-                      routingConfig.incidentio_alert_source_ids.forEach(v => allRoutes.push({ type: 'incidentio_alert_source_ids', label: 'Incident.io Source', value: v }));
-                      routingConfig.coralogix_team_names.forEach(v => allRoutes.push({ type: 'coralogix_team_names', label: 'Coralogix', value: v }));
                       routingConfig.services.forEach(v => allRoutes.push({ type: 'services', label: 'Service', value: v }));
 
                       if (allRoutes.length === 0) {
@@ -1163,7 +1127,7 @@ export default function SettingsPage() {
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-1">
                         AI Pipeline
                         <HelpTip id="ai-pipeline" position="right">
-                          <strong>AI Pipeline</strong> automatically processes your incident data (Confluence runbooks, Google Docs) on a schedule and extracts learnings to build your Knowledge Base. This enables agents to reference past incidents and solutions.
+                          <strong>AI Pipeline</strong> automatically processes your incident data (Confluence runbooks) on a schedule and extracts learnings to build your Knowledge Base. This enables agents to reference past incidents and solutions.
                         </HelpTip>
                       </h2>
                       <p className="text-sm text-slate-500">
@@ -1297,69 +1261,6 @@ export default function SettingsPage() {
                         )}
                       </div>
 
-                      {/* Google Docs Ingestor */}
-                      <div className={`p-4 rounded-lg border ${
-                        pipelineConfig.ingestors.gdocs.enabled
-                          ? 'border-slate-400 bg-slate-50 dark:bg-slate-700/50'
-                          : 'border-slate-200 dark:border-slate-600'
-                      }`}>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={pipelineConfig.ingestors.gdocs.enabled}
-                            onChange={(e) =>
-                              setPipelineConfig({
-                                ...pipelineConfig,
-                                ingestors: {
-                                  ...pipelineConfig.ingestors,
-                                  gdocs: { ...pipelineConfig.ingestors.gdocs, enabled: e.target.checked },
-                                },
-                              })
-                            }
-                            className="sr-only"
-                          />
-                          <div
-                            className={`w-4 h-4 rounded border flex items-center justify-center ${
-                              pipelineConfig.ingestors.gdocs.enabled
-                                ? 'bg-slate-600 border-slate-600'
-                                : 'border-slate-300 dark:border-slate-600'
-                            }`}
-                          >
-                            {pipelineConfig.ingestors.gdocs.enabled && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-slate-900 dark:text-white">Google Docs</div>
-                            <div className="text-xs text-slate-500">Postmortems & procedures</div>
-                          </div>
-                        </label>
-                        {pipelineConfig.ingestors.gdocs.enabled && (
-                          <div className="mt-3 pl-7">
-                            <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1">
-                              Folder IDs (comma-separated, optional)
-                            </label>
-                            <input
-                              type="text"
-                              value={pipelineConfig.ingestors.gdocs.folder_ids.join(', ')}
-                              onChange={(e) =>
-                                setPipelineConfig({
-                                  ...pipelineConfig,
-                                  ingestors: {
-                                    ...pipelineConfig.ingestors,
-                                    gdocs: {
-                                      ...pipelineConfig.ingestors.gdocs,
-                                      folder_ids: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                                    },
-                                  },
-                                })
-                              }
-                              placeholder="1abc123..., 2def456..."
-                              className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700"
-                            />
-                            <p className="text-xs text-slate-400 mt-1">Leave empty to include all shared drive docs</p>
-                          </div>
-                        )}
-                      </div>
-
                       {/* Agent Traces Ingestor */}
                       <div className={`p-4 rounded-lg border ${
                         pipelineConfig.ingestors.agent_traces.enabled
@@ -1462,9 +1363,6 @@ export default function SettingsPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          { key: 'new_relic', name: 'New Relic', desc: 'Distributed tracing' },
-                          { key: 'datadog', name: 'Datadog', desc: 'APM traces' },
-                          { key: 'cloudwatch', name: 'AWS CloudWatch', desc: 'X-Ray traces' },
                           { key: 'prometheus', name: 'Prometheus', desc: 'Service mesh metrics' },
                         ].map((source) => (
                           <label

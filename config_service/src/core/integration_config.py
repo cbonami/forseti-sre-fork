@@ -2,8 +2,8 @@
 Integration Configuration System
 
 Manages integrations with different ownership levels:
-- Org-level: Shared credentials (OpenAI, Slack app)
-- Team-level: Team-specific settings (Grafana URL, default channel)
+- Org-level: Shared credentials (OpenAI API keys)
+- Team-level: Team-specific settings (Grafana URL, API key)
 
 Config Structure:
 {
@@ -13,14 +13,6 @@ Config Structure:
             "locked": true,
             "config_schema": {...},
             "api_key": "sk-..."
-        },
-        "slack": {
-            "level": "org",
-            "locked": false,
-            "config_schema": {...},
-            "team_config_schema": {...},
-            "bot_token": "xoxb-...",
-            "default_channel": "#incidents"
         },
         "grafana": {
             "level": "team",
@@ -120,65 +112,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
         team_fields=[],
         docs_url="https://platform.openai.com/docs",
     ),
-    "slack": IntegrationSchema(
-        id="slack",
-        name="Slack",
-        description="Slack integration for notifications and triggers",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="bot_token",
-                type="secret",
-                required=True,
-                display_name="Bot Token",
-                description="Slack bot token (xoxb-...)",
-            ),
-            IntegrationFieldSchema(
-                name="app_token",
-                type="secret",
-                required=False,
-                display_name="App Token",
-                description="Slack app token for socket mode (xapp-...)",
-            ),
-            IntegrationFieldSchema(
-                name="signing_secret",
-                type="secret",
-                required=False,
-                display_name="Signing Secret",
-                description="For webhook verification",
-            ),
-        ],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="default_channel",
-                type="string",
-                required=False,
-                display_name="Default Channel",
-                description="Channel for incident notifications",
-                placeholder="#incidents",
-            ),
-            IntegrationFieldSchema(
-                name="mention_oncall",
-                type="boolean",
-                required=False,
-                default=True,
-                display_name="Mention On-Call",
-                description="Whether to mention on-call in notifications",
-            ),
-            IntegrationFieldSchema(
-                name="thread_replies",
-                type="boolean",
-                required=False,
-                default=True,
-                display_name="Thread Replies",
-                description="Reply in threads instead of new messages",
-            ),
-        ],
-        docs_url="https://api.slack.com/",
-        setup_instructions="1. Create a Slack app\n2. Add bot scopes\n3. Install to workspace\n4. Copy bot token",
-    ),
     "github": IntegrationSchema(
         id="github",
         name="GitHub",
@@ -212,53 +145,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
                 placeholder="owner/repo",
             ),
         ],
-    ),
-    "gitlab": IntegrationSchema(
-        id="gitlab",
-        name="GitLab",
-        description="GitLab integration for code, MRs, and CI/CD pipelines",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="Access Token",
-                description="GitLab access token with api scope (personal, project, or group token)",
-                placeholder="glpat-...",
-            ),
-            IntegrationFieldSchema(
-                name="domain",
-                type="string",
-                required=False,
-                default="https://gitlab.com",
-                display_name="GitLab URL",
-                description="GitLab instance URL (leave blank for gitlab.com)",
-                placeholder="https://gitlab.yourcompany.com",
-            ),
-            IntegrationFieldSchema(
-                name="verify_ssl",
-                type="boolean",
-                required=False,
-                default=True,
-                display_name="Verify SSL",
-                description="Verify SSL certificates (disable for self-signed certs)",
-            ),
-        ],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="default_project",
-                type="string",
-                required=False,
-                display_name="Default Project",
-                description="Default project path for this team",
-                placeholder="group/project",
-            ),
-        ],
-        docs_url="https://docs.gitlab.com/ee/api/",
-        setup_instructions="1. Log into your GitLab instance\n2. For personal: User Settings > Access Tokens\n   For enterprise: group/project Settings > Access Tokens\n3. Create a token with 'api' scope\n4. Enter the token and your GitLab URL",
     ),
     "kubernetes": IntegrationSchema(
         id="kubernetes",
@@ -334,81 +220,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
             ),
         ],
     ),
-    "datadog": IntegrationSchema(
-        id="datadog",
-        name="Datadog",
-        description="Datadog for metrics, logs, and APM",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="API Key",
-            ),
-            IntegrationFieldSchema(
-                name="app_key",
-                type="secret",
-                required=True,
-                display_name="Application Key",
-            ),
-            IntegrationFieldSchema(
-                name="site",
-                type="string",
-                required=False,
-                default="datadoghq.com",
-                display_name="Datadog Site",
-                allowed_values=[
-                    "datadoghq.com",
-                    "datadoghq.eu",
-                    "us3.datadoghq.com",
-                    "us5.datadoghq.com",
-                ],
-            ),
-        ],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="service_filter",
-                type="string",
-                required=False,
-                display_name="Service Filter",
-                description="Filter services by tag or name pattern",
-            ),
-        ],
-    ),
-    "newrelic": IntegrationSchema(
-        id="newrelic",
-        name="New Relic",
-        description="New Relic for APM and infrastructure",
-        level=IntegrationLevel.TEAM,
-        locked=False,
-        required=False,
-        org_fields=[],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="API Key",
-                description="New Relic User API key",
-            ),
-            IntegrationFieldSchema(
-                name="account_id",
-                type="string",
-                required=True,
-                display_name="Account ID",
-            ),
-            IntegrationFieldSchema(
-                name="region",
-                type="string",
-                required=False,
-                default="US",
-                allowed_values=["US", "EU"],
-            ),
-        ],
-    ),
     "pagerduty": IntegrationSchema(
         id="pagerduty",
         name="PagerDuty",
@@ -440,37 +251,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
             ),
         ],
     ),
-    "google_docs": IntegrationSchema(
-        id="google_docs",
-        name="Google Docs",
-        description="Google Docs/Drive for runbooks and documentation",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="service_account_key",
-                type="secret",
-                required=True,
-                display_name="Service Account Key",
-                description="JSON key for service account",
-            ),
-        ],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="runbook_folder_id",
-                type="string",
-                required=False,
-                display_name="Runbook Folder ID",
-            ),
-            IntegrationFieldSchema(
-                name="postmortem_folder_id",
-                type="string",
-                required=False,
-                display_name="Postmortem Folder ID",
-            ),
-        ],
-    ),
     "tavily": IntegrationSchema(
         id="tavily",
         name="Tavily",
@@ -491,55 +271,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
         team_fields=[],
         docs_url="https://tavily.com/",
         setup_instructions="1. Sign up at https://tavily.com/\n2. Get your API key from the dashboard\n3. Add it to the integration settings",
-    ),
-    "incident_io": IntegrationSchema(
-        id="incident_io",
-        name="incident.io",
-        description="Incident management and alerting platform",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="API Key",
-                description="incident.io API key with View data permission",
-                placeholder="inc_...",
-            ),
-        ],
-        team_fields=[],
-        docs_url="https://api-docs.incident.io/",
-        setup_instructions="1. Go to your incident.io dashboard\n2. Click settings > API keys\n3. Create a new key with View data permission\n4. Copy the API key",
-    ),
-    "blameless": IntegrationSchema(
-        id="blameless",
-        name="Blameless",
-        description="Incident management and retrospective platform",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="API Key",
-                description="Blameless API key",
-            ),
-            IntegrationFieldSchema(
-                name="instance_url",
-                type="string",
-                required=True,
-                display_name="Instance URL",
-                description="Your Blameless instance URL",
-                placeholder="https://your-org.blameless.io",
-            ),
-        ],
-        team_fields=[],
-        docs_url="https://docs.blameless.com/",
-        setup_instructions="1. Go to your Blameless settings\n2. Navigate to API keys\n3. Create a new API key\n4. Copy the key and your instance URL",
     ),
     "llm": IntegrationSchema(
         id="llm",
@@ -697,48 +428,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
         setup_instructions=(
             "Option A (recommended): Generate a Bedrock API key in the AWS Console → Amazon Bedrock → API keys\n"
             "Option B: Create an IAM user with bedrock:InvokeModel permission and provide access keys"
-        ),
-    ),
-    "aws": IntegrationSchema(
-        id="aws",
-        name="AWS",
-        description="AWS cloud infrastructure access (EC2, ECS, Lambda, CloudWatch)",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="aws_access_key_id",
-                type="secret",
-                required=True,
-                display_name="AWS Access Key ID",
-                description="IAM access key with read permissions for EC2, ECS, Lambda, CloudWatch",
-                placeholder="AKIA...",
-            ),
-            IntegrationFieldSchema(
-                name="aws_secret_access_key",
-                type="secret",
-                required=True,
-                display_name="AWS Secret Access Key",
-                description="IAM secret access key",
-            ),
-            IntegrationFieldSchema(
-                name="region",
-                type="string",
-                required=False,
-                default="us-east-1",
-                display_name="AWS Region",
-                description="Default AWS region",
-                placeholder="us-east-1",
-            ),
-        ],
-        team_fields=[],
-        docs_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
-        setup_instructions=(
-            "1. Go to IAM > Users > select or create a user\n"
-            "2. Attach ReadOnlyAccess or specific policies (EC2, ECS, Lambda, CloudWatch)\n"
-            "3. Go to Security credentials > Create access key\n"
-            "4. Copy the Access Key ID and Secret Access Key"
         ),
     ),
     "vertex_ai": IntegrationSchema(
@@ -979,41 +668,6 @@ INTEGRATION_SCHEMAS: Dict[str, IntegrationSchema] = {
             ),
         ],
     ),
-    "firehydrant": IntegrationSchema(
-        id="firehydrant",
-        name="FireHydrant",
-        description="Incident management platform with services, environments, and runbooks",
-        level=IntegrationLevel.ORG,
-        locked=False,
-        required=False,
-        org_fields=[
-            IntegrationFieldSchema(
-                name="api_key",
-                type="secret",
-                required=True,
-                display_name="API Key",
-                description="FireHydrant API token",
-            ),
-        ],
-        team_fields=[
-            IntegrationFieldSchema(
-                name="environment_id",
-                type="string",
-                required=False,
-                display_name="Environment ID",
-                description="Default environment for this team",
-            ),
-            IntegrationFieldSchema(
-                name="service_id",
-                type="string",
-                required=False,
-                display_name="Service ID",
-                description="Default service for this team",
-            ),
-        ],
-        docs_url="https://firehydrant.com/docs/api/",
-        setup_instructions="1. Go to FireHydrant Settings > API Keys\n2. Create a new Bot token\n3. Copy the API key",
-    ),
 }
 
 
@@ -1184,54 +838,9 @@ def get_integration_config_for_tool(
         "grafana_query_prometheus": "grafana",
         "grafana_list_dashboards": "grafana",
         "grafana_get_dashboard": "grafana",
-        "query_datadog_metrics": "datadog",
-        "search_datadog_logs": "datadog",
-        "query_newrelic_nrql": "newrelic",
-        "get_apm_summary": "newrelic",
         "search_github_code": "github",
         "read_github_file": "github",
-        "gitlab_list_projects": "gitlab",
-        "gitlab_get_project": "gitlab",
-        "gitlab_search_projects": "gitlab",
-        "gitlab_get_pipelines": "gitlab",
-        "gitlab_get_pipeline_jobs": "gitlab",
-        "gitlab_get_merge_requests": "gitlab",
-        "gitlab_get_mr": "gitlab",
-        "gitlab_get_mr_changes": "gitlab",
-        "gitlab_add_mr_comment": "gitlab",
-        "gitlab_list_commits": "gitlab",
-        "gitlab_get_commit": "gitlab",
-        "gitlab_list_branches": "gitlab",
-        "gitlab_list_tags": "gitlab",
-        "gitlab_list_issues": "gitlab",
-        "gitlab_get_issue": "gitlab",
-        "gitlab_create_issue": "gitlab",
-        "search_slack_messages": "slack",
         "web_search": "tavily",
-        "incidentio_list_incidents": "incident_io",
-        "incidentio_get_incident": "incident_io",
-        "incidentio_get_incident_updates": "incident_io",
-        "incidentio_list_incidents_by_date_range": "incident_io",
-        "incidentio_list_severities": "incident_io",
-        "incidentio_list_incident_types": "incident_io",
-        "incidentio_get_alert_analytics": "incident_io",
-        "incidentio_calculate_mttr": "incident_io",
-        "blameless_list_incidents": "blameless",
-        "blameless_get_incident": "blameless",
-        "blameless_get_incident_timeline": "blameless",
-        "blameless_list_incidents_by_date_range": "blameless",
-        "blameless_list_severities": "blameless",
-        "blameless_get_retrospective": "blameless",
-        "blameless_get_alert_analytics": "blameless",
-        "blameless_calculate_mttr": "blameless",
-        "firehydrant_list_incidents": "firehydrant",
-        "firehydrant_get_incident": "firehydrant",
-        "firehydrant_get_incident_timeline": "firehydrant",
-        "firehydrant_list_incidents_by_date_range": "firehydrant",
-        "firehydrant_list_services": "firehydrant",
-        "firehydrant_list_environments": "firehydrant",
-        "firehydrant_get_alert_analytics": "firehydrant",
-        "firehydrant_calculate_mttr": "firehydrant",
     }
 
     integration_id = tool_to_integration.get(tool_name)

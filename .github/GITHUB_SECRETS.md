@@ -6,7 +6,7 @@ This document lists the required GitHub secrets for CI/CD workflows.
 
 In the multi-tenant architecture, customer API keys are **NOT** stored in GitHub secrets or K8s secrets:
 
-- **Customer API keys** (Anthropic BYOK, Coralogix, Datadog, etc.) → stored in config-service RDS
+- **Customer API keys** (Anthropic BYOK, Grafana, etc.) → stored in config-service RDS
 - **Shared Anthropic key** (for free trials) → stored in AWS Secrets Manager, accessed via IRSA
 - **Platform secrets** (JWT, observability) → stored in GitHub secrets / K8s secrets
 
@@ -41,7 +41,7 @@ The following are stored elsewhere and do NOT need to be in GitHub secrets:
 | Secret | Where It Lives | Why |
 |--------|---------------|-----|
 | `ANTHROPIC_API_KEY` | Config-service (BYOK) or AWS Secrets Manager (shared) | Per-tenant BYOK or shared key for free tier/non-BYOK customers |
-| Other integration keys | Config-service | Customer integration credentials (Coralogix, Datadog, Slack, GitHub, etc.) |
+| Other integration keys | Config-service | Customer integration credentials (Grafana, Jira, GitHub, etc.) |
 
 ## AWS IAM Policy
 

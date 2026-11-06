@@ -105,7 +105,7 @@ else
     echo ""
     echo "Create .env in the repo root with:"
     echo "  ANTHROPIC_API_KEY=sk-ant-..."
-    echo "  CORALOGIX_API_KEY=..."
+    echo "  GRAFANA_URL=... (optional)"
     echo ""
     exit 1
 fi
@@ -143,24 +143,11 @@ fi
 kubectl create secret generic opensre-secrets \
     --from-literal=anthropic-api-key="${ANTHROPIC_API_KEY}" \
     --from-literal=laminar-api-key="${LMNR_PROJECT_API_KEY:-}" \
-    --from-literal=coralogix-api-key="${CORALOGIX_API_KEY:-}" \
-    --from-literal=coralogix-domain="${CORALOGIX_DOMAIN:-}" \
-    --from-literal=datadog-api-key="${DATADOG_API_KEY:-}" \
-    --from-literal=datadog-app-key="${DATADOG_APP_KEY:-}" \
-    --from-literal=datadog-site="${DATADOG_SITE:-datadoghq.com}" \
     --from-literal=prometheus-url="${PROMETHEUS_URL:-}" \
     --from-literal=alertmanager-url="${ALERTMANAGER_URL:-}" \
     --from-literal=grafana-url="${GRAFANA_URL:-}" \
     --from-literal=grafana-api-key="${GRAFANA_API_KEY:-}" \
-    --from-literal=sentry-auth-token="${SENTRY_AUTH_TOKEN:-}" \
-    --from-literal=sentry-organization="${SENTRY_ORGANIZATION:-}" \
-    --from-literal=sentry-project="${SENTRY_PROJECT:-}" \
-    --from-literal=elasticsearch-url="${ELASTICSEARCH_URL:-}" \
-    --from-literal=elasticsearch-index="${ELASTICSEARCH_INDEX:-logs-*}" \
     --from-literal=loki-url="${LOKI_URL:-}" \
-    --from-literal=splunk-host="${SPLUNK_HOST:-}" \
-    --from-literal=splunk-token="${SPLUNK_TOKEN:-}" \
-    --from-literal=splunk-port="${SPLUNK_PORT:-8089}" \
     --from-literal=github-token="${GITHUB_TOKEN:-}" \
     --from-literal=github-app-id="${GITHUB_APP_ID:-}" \
     --from-literal=github-private-key-b64="${GITHUB_PRIVATE_KEY_B64:-}" \

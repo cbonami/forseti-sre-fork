@@ -172,7 +172,7 @@ class YAMLConfigManager:
         """Update a specific integration's configuration.
 
         Args:
-            integration_name: Name of the integration (e.g., "coralogix")
+            integration_name: Name of the integration (e.g., "grafana")
             integration_config: Integration configuration dict
             write_secrets_to_env: If True, write secret fields to .env and use references in YAML
         """
