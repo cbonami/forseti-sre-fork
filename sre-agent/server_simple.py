@@ -28,7 +28,9 @@ from typing import Dict, List, Optional
 
 import httpx
 import investigation_lifecycle as _il
+import investigation_runtime as _rt
 from dotenv import load_dotenv
+from events import queued_event
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from memory.neo4j_conn import NEO4J_DATABASE, get_driver
@@ -101,8 +103,13 @@ def finalize_investigation(
     tool_calls_count: Optional[int] = None,
     run_status: Optional[str] = None,
     error_message: Optional[str] = None,
+    usage: Optional[dict] = None,
 ) -> None:
-    """Store episode via shared lifecycle module; mark agent run complete."""
+    """Store episode via shared lifecycle module; mark agent run complete.
+
+    ``usage`` is the session's last_turn_usage (agent.turn_usage_from_snapshots)
+    and is persisted on the agent run as cost/token columns.
+    """
     run_id = _run_id_by_thread.get(thread_id)
     try:
         tid_org, tid_team = _thread_tenancy(thread_id)
@@ -130,6 +137,7 @@ def finalize_investigation(
         tool_calls_count=tool_calls_count,
         run_status=run_status,
         error_message=error_message,
+        usage=usage,
     )
 
 
@@ -213,13 +221,21 @@ def _actor_from_auth_me(data: dict) -> Optional[str]:
 
 
 def _create_agent_run(
-    thread_id: str, prompt: str, agent_name: str = "sre-agent"
+    thread_id: str,
+    prompt: str,
+    agent_name: str = "sre-agent",
+    run_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
 ) -> Optional[str]:
-    """POST to config-service to create an agent run record. Returns run_id or None."""
+    """POST to config-service to create an agent run record. Returns run_id or None.
+
+    ``run_id`` may be pre-assigned by the caller (POST /investigations returns
+    it before the run starts); ``metadata`` lands in agent_runs.extra_metadata.
+    """
     org_id, team_node_id = _thread_tenancy(thread_id)
     trigger_source = _trigger_source_by_thread.get(thread_id, "web_ui")
     try:
-        run_id = uuid.uuid4().hex
+        run_id = run_id or uuid.uuid4().hex
         body = {
             "run_id": run_id,
             "org_id": org_id,
@@ -230,7 +246,7 @@ def _create_agent_run(
             "trigger_message": prompt,
             "trigger_channel_id": None,
             "agent_name": agent_name,
-            "metadata": None,
+            "metadata": metadata or None,
         }
         resp = httpx.post(
             f"{_CONFIG_SERVICE_URL}/api/v1/internal/agent-runs",
@@ -269,6 +285,13 @@ def _finalize_running_rows_for_thread(thread_id: str) -> None:
         )
 
 
+def _final_run_status(success: bool, run_status: Optional[str]) -> str:
+    """agent_runs status: interrupted/timeout win, else completed/failed."""
+    if run_status in ("interrupted", "timeout"):
+        return run_status
+    return "completed" if success else "failed"
+
+
 def _complete_agent_run(
     thread_id: str,
     success: bool,
@@ -280,6 +303,7 @@ def _complete_agent_run(
     tool_calls_count: Optional[int] = None,
     run_status: Optional[str] = None,
     error_message: Optional[str] = None,
+    usage: Optional[dict] = None,
 ) -> None:
     """PATCH config-service to mark an agent run complete. No-op if no run_id on record."""
     run_id = _run_id_by_thread.pop(thread_id, None)
@@ -291,12 +315,7 @@ def _complete_agent_run(
         effective_count = (
             tool_calls_count if tool_calls_count is not None else len(tool_calls or [])
         )
-        if run_status == "interrupted":
-            status = "interrupted"
-        elif run_status == "timeout":
-            status = "timeout"
-        else:
-            status = "completed" if success else "failed"
+        status = _final_run_status(success, run_status)
         body = {
             "status": status,
             "duration_seconds": (
@@ -309,6 +328,7 @@ def _complete_agent_run(
             "confidence": None,
             "thoughts": None,  # thoughts persisted incrementally (Task 3)
             "sdk_session_id": sdk_session_id,  # for durable resume
+            **_rt.usage_for_agent_run(usage),  # cost/tokens (omitted if none)
         }
         resp = httpx.patch(
             f"{_CONFIG_SERVICE_URL}/api/v1/internal/agent-runs/{run_id}",
@@ -483,13 +503,19 @@ def _lookup_latest_sdk_session_id(thread_id: str) -> Optional[str]:
 
 
 async def _start_interactive_session(
-    thread_id: str, team_config, resume: Optional[str]
+    thread_id: str, team_config, resume: Optional[str], interactive: bool = True
 ):
-    """Start a session; if resume fails (missing JSONL), start without resume."""
+    """Start a session; if resume fails (missing JSONL), start without resume.
+
+    ``interactive=False`` (automatic runs) removes tools that need a human,
+    e.g. AskUserQuestion. Only passed when False so session factories that
+    predate the flag keep working.
+    """
     from agent import InteractiveAgentSession
 
+    extra = {} if interactive else {"interactive": False}
     session = InteractiveAgentSession(
-        thread_id=thread_id, team_config=team_config, resume=resume
+        thread_id=thread_id, team_config=team_config, resume=resume, **extra
     )
     try:
         await session.start()
@@ -508,7 +534,7 @@ async def _start_interactive_session(
         except Exception:
             pass
         session = InteractiveAgentSession(
-            thread_id=thread_id, team_config=team_config, resume=None
+            thread_id=thread_id, team_config=team_config, resume=None, **extra
         )
         await session.start()
         return session
@@ -535,12 +561,150 @@ _run_id_by_thread: Dict[str, str] = {}
 # Per-thread trigger_source from /investigate (teams-bot sends "teams")
 _ALLOWED_TRIGGER_SOURCES = frozenset(
     {"web_ui", "teams", "slack", "api", "scheduled", "manual"}
-)
+) | _rt.AUTOMATIC_TRIGGER_SOURCES  # + "alert" (Alertmanager dispatcher)
 _trigger_source_by_thread: Dict[str, str] = {}
 _trigger_actor_by_thread: Dict[str, str] = {}
 _active_sessions: Dict[str, object] = (
     {}
 )  # Thread ID -> agent session (for interrupt/answer)
+
+# ---------------------------------------------------------------------------
+# Runtime controls: concurrency gate, run status, session lifecycle
+# (logic in investigation_runtime.py; see sre-agent/README.md)
+# ---------------------------------------------------------------------------
+# Global cap on concurrently EXECUTING investigations (all trigger sources).
+_gate = _rt.ConcurrencyGate(
+    _rt.env_int(
+        "MAX_CONCURRENT_INVESTIGATIONS",
+        _rt.DEFAULT_MAX_CONCURRENT_INVESTIGATIONS,
+        minimum=1,
+    )
+)
+_run_status = _rt.RunStatusRegistry()
+# Threads whose background task runs non-interactively and closes after its run.
+_automatic_threads: set = set()
+# Threads with a dequeued message whose turn has not finished (incl. waiting
+# for a slot); never reaped.
+_busy_threads: set = set()
+_last_activity_by_thread: Dict[str, float] = {}
+# Drainers for POST /investigations runs (nobody holds an SSE stream).
+_drain_tasks: Dict[str, asyncio.Task] = {}
+# Every agent_background_task, including detached ones still closing their
+# session, so shutdown can wait for their CLI subprocesses to exit.
+_all_agent_tasks: set = set()
+_reaper_task: Optional[asyncio.Task] = None
+_REAPER_INTERVAL_SECONDS = 60.0
+
+
+def _session_idle_ttl_seconds() -> int:
+    """SESSION_IDLE_TTL_SECONDS (default 1800); 0 disables the idle reaper."""
+    return _rt.env_int(
+        "SESSION_IDLE_TTL_SECONDS", _rt.DEFAULT_SESSION_IDLE_TTL_SECONDS, minimum=0
+    )
+
+
+def _touch_thread(thread_id: str) -> None:
+    _last_activity_by_thread[thread_id] = time.monotonic()
+
+
+def _detach_thread(thread_id: str, task, message_queue, response_queue) -> None:
+    """Unregister a thread's task/queues, only if they are still the given ones.
+
+    Synchronous on purpose: once detached, a new /investigate on the thread
+    creates a fresh task and queues instead of writing to a queue that is
+    about to be abandoned. Identity checks keep an old task's cleanup from
+    removing a newer task's entries.
+    """
+    if task is not None and _background_tasks.get(thread_id) is task:
+        _background_tasks.pop(thread_id, None)
+    if _message_queues.get(thread_id) is message_queue:
+        _message_queues.pop(thread_id, None)
+    if _response_queues.get(thread_id) is response_queue:
+        _response_queues.pop(thread_id, None)
+
+
+def _forget_thread_state(thread_id: str) -> None:
+    """Drop per-thread request state once no task serves the thread."""
+    for d in (
+        _team_token_by_thread,
+        _team_identity_by_thread,
+        _trigger_source_by_thread,
+        _trigger_actor_by_thread,
+        _last_activity_by_thread,
+    ):
+        d.pop(thread_id, None)
+    _automatic_threads.discard(thread_id)
+    _busy_threads.discard(thread_id)
+
+
+def _fail_active_status(thread_id: str, status: str, error: str) -> None:
+    """Mark the thread's current run status terminal if it is still active."""
+    rec = _run_status.get(thread_id)
+    if rec and rec.get("status") not in _rt.TERMINAL_STATUSES:
+        _run_status.update(
+            thread_id, status=status, error=error, completed_at=_rt.utc_now_iso()
+        )
+
+
+def _reap_idle_sessions(now: Optional[float] = None) -> List[str]:
+    """Close sessions idle for SESSION_IDLE_TTL_SECONDS. Returns reaped thread ids.
+
+    A thread is idle when no message is being processed or queued and the
+    session is not executing. Reaping detaches the thread synchronously and
+    sends the None shutdown signal to its own queue; the task then closes the
+    SDK client (terminating the CLI subprocess). The thread can be resumed
+    later: a new /investigate looks up the latest sdk_session_id.
+    """
+    ttl = _session_idle_ttl_seconds()
+    if ttl <= 0:
+        return []
+    now = time.monotonic() if now is None else now
+    reaped: List[str] = []
+    for thread_id, task in list(_background_tasks.items()):
+        if thread_id in _busy_threads:
+            continue
+        session = _active_sessions.get(thread_id)
+        if session is not None and getattr(session, "is_running", False):
+            continue
+        mq = _message_queues.get(thread_id)
+        if mq is None or not mq.empty():
+            continue
+        last = _last_activity_by_thread.get(thread_id)
+        if last is None:
+            _last_activity_by_thread[thread_id] = now
+            continue
+        if now - last < ttl:
+            continue
+        rq = _response_queues.get(thread_id)
+        _detach_thread(thread_id, task, mq, rq)
+        mq.put_nowait(None)
+        reaped.append(thread_id)
+        logger.info(
+            f"[REAPER] closing idle session for thread {thread_id} "
+            f"(idle {int(now - last)}s >= {ttl}s)"
+        )
+    return reaped
+
+
+async def _reaper_loop() -> None:
+    while True:
+        await asyncio.sleep(_REAPER_INTERVAL_SECONDS)
+        try:
+            _reap_idle_sessions()
+        except Exception as e:  # never let the reaper die
+            logger.warning("[REAPER] pass failed: %s", e)
+
+
+async def _drain_responses(thread_id: str, response_queue: asyncio.Queue) -> None:
+    """Consume a detached run's events so its response queue does not grow."""
+    try:
+        while True:
+            item = await response_queue.get()
+            if item is None or (isinstance(item, dict) and "error" in item):
+                return
+    finally:
+        if _drain_tasks.get(thread_id) is asyncio.current_task():
+            _drain_tasks.pop(thread_id, None)
 
 app = FastAPI(
     title="OpenSRE Investigation Server (Simple Mode)",
@@ -582,10 +746,32 @@ async def _bootstrap_memory_schema():
         logger.error("[MEMORY] schema bootstrap failed: %s", e)
 
 
+@app.on_event("startup")
+async def _start_runtime_controls():
+    global _reaper_task
+    snap = _gate.snapshot()
+    ttl = _session_idle_ttl_seconds()
+    logger.info(
+        f"[RUNTIME] MAX_CONCURRENT_INVESTIGATIONS={snap['limit']}, "
+        f"SESSION_IDLE_TTL_SECONDS={ttl}"
+    )
+    if not (os.getenv("AGENT_INTERNAL_TOKEN") or "").strip():
+        logger.warning(
+            "[RUNTIME] AGENT_INTERNAL_TOKEN is not set: /investigations endpoints "
+            "accept unauthenticated requests (local dev only)"
+        )
+    if ttl > 0 and (_reaper_task is None or _reaper_task.done()):
+        _reaper_task = asyncio.create_task(_reaper_loop(), name="session-reaper")
+
+
 @app.on_event("shutdown")
 async def _finalize_on_shutdown():
     """Best-effort: mark in-flight simple-mode runs interrupted on SIGTERM."""
     logger.info("[SHUTDOWN] finalizing in-flight agent runs")
+    if _reaper_task is not None and not _reaper_task.done():
+        _reaper_task.cancel()
+    for drain in list(_drain_tasks.values()):
+        drain.cancel()
     thread_ids = list(_background_tasks.keys())
     for thread_id in thread_ids:
         session = _active_sessions.get(thread_id)
@@ -614,7 +800,7 @@ async def _finalize_on_shutdown():
             task.cancel()
     leftover = [
         t
-        for t in _background_tasks.values()
+        for t in set(_background_tasks.values()) | _all_agent_tasks
         if isinstance(t, asyncio.Task) and not t.done()
     ]
     if leftover:
@@ -652,6 +838,22 @@ class InvestigateRequest(BaseModel):
     trigger_source: Optional[str] = None
     # Optional. Teams sends activity.from.name. Web omits; we infer from /auth/me.
     trigger_actor: Optional[str] = None
+    # Optional JSON object stored on the agent run (agent_runs.extra_metadata).
+    metadata: Optional[dict] = None
+
+
+class StartInvestigationRequest(BaseModel):
+    """POST /investigations: start a run without holding an SSE stream."""
+
+    prompt: str
+    # Caller-supplied, so the caller knows it before the run starts.
+    thread_id: str
+    # "alert" = automatic (never queued: 429 when no slot; non-interactive;
+    # session closed after the run). Anything else is a manual run that waits.
+    trigger_source: Optional[str] = "api"
+    trigger_actor: Optional[str] = None
+    # e.g. {"alert_ids": [...], "policy_id": "...", "batch_id": "..."}
+    metadata: Optional[dict] = None
 
 
 class InterruptRequest(BaseModel):
@@ -689,6 +891,7 @@ async def health():
         "mode": "simple",
         "active_sessions": len(_background_tasks),
         "interruptible_sessions": len(_active_sessions),
+        "concurrency": _gate.snapshot(),
     }
 
 
@@ -718,8 +921,14 @@ def _extract_team_token(request: Request) -> Optional[str]:
 async def _ensure_background_task(
     thread_id: str,
     resume_session_id: Optional[str] = None,
+    automatic: bool = False,
 ) -> None:
-    """Start the per-thread background agent task if not already running."""
+    """Start the per-thread background agent task if not already running.
+
+    ``automatic`` (trigger_source "alert") makes the new task's session
+    non-interactive and closes it after the run. It has no effect on a task
+    that already exists.
+    """
     if thread_id in _background_tasks:
         return
     if not resume_session_id:
@@ -727,10 +936,17 @@ async def _ensure_background_task(
     logger.info(f"Creating background task for thread {thread_id}")
     _message_queues[thread_id] = asyncio.Queue()
     _response_queues[thread_id] = asyncio.Queue()
+    if automatic:
+        _automatic_threads.add(thread_id)
+    else:
+        _automatic_threads.discard(thread_id)
+    _touch_thread(thread_id)
     task = asyncio.create_task(
         agent_background_task(thread_id, resume_session_id=resume_session_id)
     )
     _background_tasks[thread_id] = task
+    _all_agent_tasks.add(task)
+    task.add_done_callback(_all_agent_tasks.discard)
     # Give the task a moment to start before the first message is queued.
     await asyncio.sleep(0.1)
 
@@ -797,11 +1013,20 @@ async def agent_background_task(
     """
     Background task that keeps ClaudeSDKClient alive for multi-turn conversations.
     Processes messages from queue and sends responses back.
+
+    Lifecycle: the SDK session (one CLI subprocess) is started lazily for the
+    first message, after a concurrency slot is held. The task ends, and the
+    session is closed, on a None message (shutdown / idle reaper), after an
+    automatic thread's run when nothing else is queued, or on error.
     """
 
     from agent import observability_update_metadata
 
     logger.info(f"[BG] Starting background agent task for thread {thread_id}")
+
+    # Flags fixed for the lifetime of this task (set by _ensure_background_task).
+    automatic = thread_id in _automatic_threads
+    my_task = asyncio.current_task()
 
     # Per-request team token overrides static env for config-service auth.
     prev_team_token = os.environ.get("TEAM_TOKEN")
@@ -823,14 +1048,9 @@ async def agent_background_task(
         except Exception as e:
             logger.warning(f"[BG] Failed to load team config (continuing without): {e}")
 
-    session = await _start_interactive_session(
-        thread_id, team_config, resume_session_id
-    )
-    logger.info(f"[BG] Session started for thread {thread_id}")
-    _active_sessions[thread_id] = session
-
     message_queue = _message_queues[thread_id]
     response_queue = _response_queues[thread_id]
+    session = None
 
     try:
         while True:
@@ -842,175 +1062,261 @@ async def agent_background_task(
                 logger.info(f"[BG] Shutdown signal received for thread {thread_id}")
                 break
 
-            prompt = message.get("prompt")
-            original_prompt = message.get("original_prompt") or prompt
-            images = message.get("images")
-            logger.info(
-                f"[BG] Processing message for thread {thread_id}: {prompt[:50]}..."
-            )
-            if images:
-                logger.info(f"[BG] Including {len(images)} image(s) in message")
-
-            # Best-effort: create agent run record in config-service
-            _agent_name = "sre-agent"
-            try:
-                from config import get_root_agent_config
-
-                _ra = get_root_agent_config(team_config) if team_config else None
-                if _ra and getattr(_ra, "name", None):
-                    _agent_name = _ra.name
-            except Exception:
-                _agent_name = "sre-agent"
-            _finalize_running_rows_for_thread(thread_id)
-            _rid = _create_agent_run(
-                thread_id=thread_id, prompt=original_prompt, agent_name=_agent_name
-            )
-            if _rid:
-                _run_id_by_thread[thread_id] = _rid
-                write_thread_run_id(thread_id, _rid)
-                # Stamp the OpenSRE URL hex onto this turn's Langfuse metadata
-                # so cost traces can be pasted onto /team/agent-runs/{id}.
-                observability_update_metadata(thread_id, agent_run_id=_rid)
-                await response_queue.put(
-                    {
-                        "event": "run_started",
-                        "data": {"run_id": _rid, "agent": _agent_name},
-                    }
+            _busy_threads.add(thread_id)
+            _touch_thread(thread_id)
+            slot_held = bool(message.get("slot_reserved"))
+            if not message.get("status_begun"):
+                _run_status.begin(
+                    thread_id,
+                    status="queued",
+                    run_id=message.get("run_id"),
+                    trigger_source=_trigger_source_by_thread.get(thread_id, "web_ui"),
+                    trigger_actor=_trigger_actor_by_thread.get(thread_id),
+                    metadata=message.get("metadata"),
                 )
-
-            run_tool_calls: list = []
-            run_result_text: str = ""
-            run_success: bool = True
-            run_status: Optional[str] = None
-            run_error_message: Optional[str] = None
-            run_start = time.time()
-
-            seq = 0  # shared ordering across thoughts + tools
-            task_agents: dict = {}  # Task tool_use_id -> subagent_type
-            tool_started: dict = {}  # tool_use_id -> {seq, started_at(float)}
-            thought_buffer: list = []
-            root_agent = _agent_name
-            # Count of tool calls actually persisted to config-service (one per
-            # tool_end event with a run_id). Used for the final tool_calls_count
-            # on the completion PATCH, so it matches the real agent_tool_calls
-            # row count instead of the raw SSE-event count (which double-counts
-            # tool_start+tool_end and includes thoughts).
-            persisted_tool_call_count = 0
-
-            event_count = 0
-            async for event in session.execute(prompt, images=images):
-                event_count += 1
-                event_type = event.type
-                data = event.data if isinstance(event.data, dict) else {}
-
-                _collect_tool_call(run_tool_calls, {"type": event_type, "data": data})
-
-                if event_type == "thought":
-                    text = (data.get("text") or "").strip()
-                    if text and text != "(no content)":
-                        agent_info = _agent_for(
-                            task_agents, root_agent, data.get("parent_tool_use_id")
+            try:
+                if not slot_held:
+                    # Manual runs wait for a global slot; tell the stream.
+                    if not _gate.try_acquire():
+                        snap = _gate.snapshot()
+                        _run_status.update(thread_id, status="queued")
+                        ev = queued_event(
+                            thread_id,
+                            position=snap["waiting"] + 1,
+                            active=snap["active"],
+                            limit=snap["limit"],
                         )
-                        thought_buffer.append(
-                            {
-                                "text": text,
-                                "ts": datetime.datetime.now(
-                                    datetime.timezone.utc
-                                ).isoformat(),
-                                "seq": seq,
-                                "agent": agent_info["agent_type"],
-                                "depth": agent_info["depth"],
-                                "agentId": agent_info["invocation_id"],
-                                "parentAgentId": agent_info["parent_invocation_id"],
-                            }
+                        await response_queue.put({"event": ev.type, "data": ev.data})
+                        logger.info(
+                            f"[GATE] thread {thread_id} queued "
+                            f"(active={snap['active']}/{snap['limit']})"
                         )
-                        seq += 1
-                        if _rid:
-                            _flush_thoughts(_rid, thought_buffer)
-                            thought_buffer = []
+                        await _gate.acquire()
+                    slot_held = True
 
-                elif event_type == "tool_start":
-                    tuid = data.get("tool_use_id") or f"tool-{seq}"
-                    if data.get("name") in ("Task", "Agent") and data.get(
-                        "subagent_type"
-                    ):
-                        # The dispatching call's own attribution (data["depth"]/["agent_id"])
-                        # tells us the NEW subagent's depth (+1) and parent invocation id.
-                        # invocation_id for the new subagent is this Task/Agent call's own
-                        # tool_use_id (tuid) — stable, matches agent.py's registry (Task 1).
-                        task_agents[tuid] = {
-                            "agent_type": data["subagent_type"],
-                            "depth": data.get("depth", 0) + 1,
-                            "invocation_id": tuid,
-                            "parent_invocation_id": data.get("agent_id"),
-                        }
-                    tool_started[tuid] = {
-                        "seq": seq,
-                        "t": time.time(),
-                        "input": data.get("input"),
-                        "name": data.get("name"),
-                    }
-                    seq += 1
-
-                elif event_type == "tool_end" and _rid:
-                    tuid = data.get("tool_use_id")
-                    started = tool_started.pop(tuid, None) if tuid else None
-                    _persist_tool_call(
-                        _rid,
-                        _tool_call_record(data, started, root_agent, task_agents, seq),
+                if session is None:
+                    session = await _start_interactive_session(
+                        thread_id,
+                        team_config,
+                        resume_session_id,
+                        interactive=not automatic,
                     )
-                    persisted_tool_call_count += 1
+                    logger.info(f"[BG] Session started for thread {thread_id}")
+                    _active_sessions[thread_id] = session
 
-                elif event_type == "sdk_session" and _rid:
-                    sid = data.get("session_id")
-                    if sid:
-                        _persist_sdk_session_id(_rid, sid)
+                prompt = message.get("prompt")
+                original_prompt = message.get("original_prompt") or prompt
+                images = message.get("images")
+                logger.info(
+                    f"[BG] Processing message for thread {thread_id}: {prompt[:50]}..."
+                )
+                if images:
+                    logger.info(f"[BG] Including {len(images)} image(s) in message")
 
-                if event_type == "result":
-                    run_result_text = data.get("text", "")
-                    run_success = data.get("success", True)
-                    if getattr(session, "_was_interrupted", False):
-                        run_status = "interrupted"
-                        data = {
-                            **data,
-                            "subtype": "interrupted",
-                            "success": True,
-                            "text": run_result_text
-                            or "Task interrupted. Send a new message to continue.",
+                # Best-effort: create agent run record in config-service
+                _agent_name = "sre-agent"
+                try:
+                    from config import get_root_agent_config
+
+                    _ra = get_root_agent_config(team_config) if team_config else None
+                    if _ra and getattr(_ra, "name", None):
+                        _agent_name = _ra.name
+                except Exception:
+                    _agent_name = "sre-agent"
+                _finalize_running_rows_for_thread(thread_id)
+                _rid = _create_agent_run(
+                    thread_id=thread_id,
+                    prompt=original_prompt,
+                    agent_name=_agent_name,
+                    run_id=message.get("run_id"),
+                    metadata=message.get("metadata"),
+                )
+                _run_status.update(
+                    thread_id,
+                    status="running",
+                    started_at=_rt.utc_now_iso(),
+                    run_id=_rid or message.get("run_id"),
+                    run_recorded=bool(_rid),
+                )
+                if _rid:
+                    _run_id_by_thread[thread_id] = _rid
+                    write_thread_run_id(thread_id, _rid)
+                    # Stamp the OpenSRE URL hex onto this turn's Langfuse metadata
+                    # so cost traces can be pasted onto /team/agent-runs/{id}.
+                    observability_update_metadata(thread_id, agent_run_id=_rid)
+                    await response_queue.put(
+                        {
+                            "event": "run_started",
+                            "data": {"run_id": _rid, "agent": _agent_name},
                         }
-                    elif data.get("subtype") == "interrupted":
-                        run_status = "interrupted"
+                    )
 
-                elif event_type == "error":
-                    msg = (data.get("message") or "").strip()
-                    run_success = False
-                    run_error_message = msg or "Investigation failed"
-                    if "time limit" in msg.lower():
-                        run_status = "timeout"
+                run_tool_calls: list = []
+                run_result_text: str = ""
+                run_success: bool = True
+                run_status: Optional[str] = None
+                run_error_message: Optional[str] = None
+                run_start = time.time()
 
-                await response_queue.put({"event": event_type, "data": data})
+                seq = 0  # shared ordering across thoughts + tools
+                task_agents: dict = {}  # Task tool_use_id -> subagent_type
+                tool_started: dict = {}  # tool_use_id -> {seq, started_at(float)}
+                thought_buffer: list = []
+                root_agent = _agent_name
+                # Count of tool calls actually persisted to config-service (one per
+                # tool_end event with a run_id). Used for the final tool_calls_count
+                # on the completion PATCH, so it matches the real agent_tool_calls
+                # row count instead of the raw SSE-event count (which double-counts
+                # tool_start+tool_end and includes thoughts).
+                persisted_tool_call_count = 0
 
-            if _rid and thought_buffer:
-                _flush_thoughts(_rid, thought_buffer)
+                event_count = 0
+                async for event in session.execute(prompt, images=images):
+                    event_count += 1
+                    event_type = event.type
+                    data = event.data if isinstance(event.data, dict) else {}
 
-            run_duration = time.time() - run_start
-            finalize_investigation(
-                thread_id=thread_id,
-                prompt=prompt,
-                result_text=run_result_text,
-                success=run_success,
-                tool_calls=run_tool_calls,
-                duration_seconds=run_duration,
-                sdk_session_id=session.session_id,
-                tool_calls_count=persisted_tool_call_count,
-                run_status=run_status,
-                error_message=run_error_message,
-            )
-            await response_queue.put(None)
-            logger.info(
-                f"[BG] Completed message processing. Total events: {event_count}"
-            )
+                    _collect_tool_call(run_tool_calls, {"type": event_type, "data": data})
 
+                    if event_type == "thought":
+                        text = (data.get("text") or "").strip()
+                        if text and text != "(no content)":
+                            agent_info = _agent_for(
+                                task_agents, root_agent, data.get("parent_tool_use_id")
+                            )
+                            thought_buffer.append(
+                                {
+                                    "text": text,
+                                    "ts": datetime.datetime.now(
+                                        datetime.timezone.utc
+                                    ).isoformat(),
+                                    "seq": seq,
+                                    "agent": agent_info["agent_type"],
+                                    "depth": agent_info["depth"],
+                                    "agentId": agent_info["invocation_id"],
+                                    "parentAgentId": agent_info["parent_invocation_id"],
+                                }
+                            )
+                            seq += 1
+                            if _rid:
+                                _flush_thoughts(_rid, thought_buffer)
+                                thought_buffer = []
+
+                    elif event_type == "tool_start":
+                        tuid = data.get("tool_use_id") or f"tool-{seq}"
+                        if data.get("name") in ("Task", "Agent") and data.get(
+                            "subagent_type"
+                        ):
+                            # The dispatching call's own attribution (data["depth"]/["agent_id"])
+                            # tells us the NEW subagent's depth (+1) and parent invocation id.
+                            # invocation_id for the new subagent is this Task/Agent call's own
+                            # tool_use_id (tuid) — stable, matches agent.py's registry (Task 1).
+                            task_agents[tuid] = {
+                                "agent_type": data["subagent_type"],
+                                "depth": data.get("depth", 0) + 1,
+                                "invocation_id": tuid,
+                                "parent_invocation_id": data.get("agent_id"),
+                            }
+                        tool_started[tuid] = {
+                            "seq": seq,
+                            "t": time.time(),
+                            "input": data.get("input"),
+                            "name": data.get("name"),
+                        }
+                        seq += 1
+
+                    elif event_type == "tool_end" and _rid:
+                        tuid = data.get("tool_use_id")
+                        started = tool_started.pop(tuid, None) if tuid else None
+                        _persist_tool_call(
+                            _rid,
+                            _tool_call_record(data, started, root_agent, task_agents, seq),
+                        )
+                        persisted_tool_call_count += 1
+
+                    elif event_type == "sdk_session" and _rid:
+                        sid = data.get("session_id")
+                        if sid:
+                            _persist_sdk_session_id(_rid, sid)
+
+                    if event_type == "result":
+                        run_result_text = data.get("text", "")
+                        run_success = data.get("success", True)
+                        if getattr(session, "_was_interrupted", False):
+                            run_status = "interrupted"
+                            data = {
+                                **data,
+                                "subtype": "interrupted",
+                                "success": True,
+                                "text": run_result_text
+                                or "Task interrupted. Send a new message to continue.",
+                            }
+                        elif data.get("subtype") == "interrupted":
+                            run_status = "interrupted"
+
+                    elif event_type == "error":
+                        msg = (data.get("message") or "").strip()
+                        run_success = False
+                        run_error_message = msg or "Investigation failed"
+                        if "time limit" in msg.lower():
+                            run_status = "timeout"
+
+                    await response_queue.put({"event": event_type, "data": data})
+
+                if _rid and thought_buffer:
+                    _flush_thoughts(_rid, thought_buffer)
+
+                run_duration = time.time() - run_start
+                turn_usage = getattr(session, "last_turn_usage", None)
+                finalize_investigation(
+                    thread_id=thread_id,
+                    prompt=prompt,
+                    result_text=run_result_text,
+                    success=run_success,
+                    tool_calls=run_tool_calls,
+                    duration_seconds=run_duration,
+                    sdk_session_id=session.session_id,
+                    tool_calls_count=persisted_tool_call_count,
+                    run_status=run_status,
+                    error_message=run_error_message,
+                    usage=turn_usage,
+                )
+                _run_status.update(
+                    thread_id,
+                    status=_final_run_status(run_success, run_status),
+                    completed_at=_rt.utc_now_iso(),
+                    duration_seconds=round(run_duration, 3),
+                    usage=_rt.usage_for_status(turn_usage),
+                    error=run_error_message,
+                )
+                await response_queue.put(None)
+                logger.info(
+                    f"[BG] Completed message processing. Total events: {event_count}"
+                )
+            finally:
+                if slot_held:
+                    _gate.release()
+                _busy_threads.discard(thread_id)
+                _touch_thread(thread_id)
+
+            if automatic and message_queue.empty():
+                # Automatic runs have no follow-up conversation: close the SDK
+                # session (and its CLI subprocess) as soon as the run is done.
+                # Detach synchronously first so a new request on this thread
+                # gets a fresh task instead of a queue nobody reads.
+                _detach_thread(thread_id, my_task, message_queue, response_queue)
+                logger.info(
+                    f"[BG] Automatic thread {thread_id} finished; closing session"
+                )
+                break
+
+    except asyncio.CancelledError:
+        _fail_active_status(
+            thread_id,
+            "interrupted",
+            "Investigation interrupted (agent shutting down)",
+        )
+        raise
     except Exception as e:
         logger.error(
             f"[BG] Background task failed for thread {thread_id}: {e}", exc_info=True
@@ -1024,6 +1330,7 @@ async def agent_background_task(
             duration_seconds=0.0,
             sdk_session_id=getattr(session, "session_id", None),
         )
+        _fail_active_status(thread_id, "failed", f"Investigation failed: {e}")
         await response_queue.put({"error": str(e)})
     finally:
         if thread_token:
@@ -1031,11 +1338,27 @@ async def agent_background_task(
                 os.environ.pop("TEAM_TOKEN", None)
             else:
                 os.environ["TEAM_TOKEN"] = prev_team_token
-        _active_sessions.pop(thread_id, None)
-        _background_tasks.pop(thread_id, None)
-        _message_queues.pop(thread_id, None)
-        _response_queues.pop(thread_id, None)
-        if session.client:
+        _detach_thread(thread_id, my_task, message_queue, response_queue)
+        # Messages still queued will never run on this task: give back any
+        # slot reserved for them and end their stream / status.
+        while not message_queue.empty():
+            leftover = message_queue.get_nowait()
+            if not isinstance(leftover, dict):
+                continue
+            if leftover.get("slot_reserved"):
+                _gate.release()
+            _fail_active_status(
+                thread_id, "failed", "Investigation not started (session ended)"
+            )
+            response_queue.put_nowait({"error": "Investigation not started"})
+        if _active_sessions.get(thread_id) is session:
+            _active_sessions.pop(thread_id, None)
+        if thread_id not in _background_tasks:
+            _forget_thread_state(thread_id)
+        if session is not None and session.client:
+            # Not wrapped in wait_for: a raw asyncio cancel inside the SDK's
+            # transport close skips its terminate/kill escalation (see
+            # SubprocessCLITransport.close). close() bounds itself (~20s).
             await session.cleanup()
         logger.info(f"[BG] Background task ended for thread {thread_id}")
 
@@ -1101,6 +1424,50 @@ def _download_file_attachments(file_downloads: list, thread_id: str):
             )
 
 
+async def _submit_run(
+    thread_id: str,
+    prompt: str,
+    *,
+    automatic: bool,
+    slot_reserved: bool,
+    run_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    images: Optional[List[dict]] = None,
+    resume_session_id: Optional[str] = None,
+) -> asyncio.Queue:
+    """Queue a run on the thread's background task; returns its response queue.
+
+    ``slot_reserved``: the caller already holds a concurrency slot (automatic
+    runs); the background task releases it when the run ends.
+    """
+    await _ensure_background_task(
+        thread_id, resume_session_id=resume_session_id, automatic=automatic
+    )
+    message_queue = _message_queues[thread_id]
+    response_queue = _response_queues[thread_id]
+    _run_status.begin(
+        thread_id,
+        status="running" if slot_reserved else "queued",
+        run_id=run_id,
+        trigger_source=_trigger_source_by_thread.get(thread_id, "web_ui"),
+        trigger_actor=_trigger_actor_by_thread.get(thread_id),
+        metadata=metadata,
+    )
+    message_queue.put_nowait(
+        {
+            "prompt": prompt,
+            "original_prompt": prompt,
+            "images": images,
+            "run_id": run_id,
+            "metadata": metadata,
+            "slot_reserved": slot_reserved,
+            "status_begun": True,
+        }
+    )
+    _touch_thread(thread_id)
+    return response_queue
+
+
 async def create_investigation_stream(
     thread_id: str,
     prompt: str,
@@ -1108,29 +1475,45 @@ async def create_investigation_stream(
     images: Optional[List[dict]] = None,
     file_downloads: Optional[List[dict]] = None,
     resume_session_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    submitted_queue: Optional[asyncio.Queue] = None,
 ):
     """
     Create SSE stream by communicating with background agent task.
+
+    ``submitted_queue``: the message was already queued by the handler
+    (automatic runs reserve their slot up front); only stream its events.
     """
     import datetime
     import json
 
     try:
-        # Create background task if needed
-        await _ensure_background_task(thread_id, resume_session_id=resume_session_id)
+        if submitted_queue is not None:
+            response_queue = submitted_queue
+        else:
+            # Create background task if needed
+            await _ensure_background_task(
+                thread_id, resume_session_id=resume_session_id
+            )
 
-        # Download file attachments directly (no sandbox, so download in-process)
-        if file_downloads:
-            _download_file_attachments(file_downloads, thread_id)
+            # Download file attachments directly (no sandbox, so download in-process)
+            if file_downloads:
+                _download_file_attachments(file_downloads, thread_id)
 
-        # Send message to background task
-        message_queue = _message_queues[thread_id]
-        response_queue = _response_queues[thread_id]
+            # Send message to background task
+            message_queue = _message_queues[thread_id]
+            response_queue = _response_queues[thread_id]
 
-        logger.info(f"Sending message to background task for thread {thread_id}")
-        await message_queue.put(
-            {"prompt": prompt, "original_prompt": prompt, "images": images}
-        )
+            logger.info(f"Sending message to background task for thread {thread_id}")
+            _touch_thread(thread_id)
+            await message_queue.put(
+                {
+                    "prompt": prompt,
+                    "original_prompt": prompt,
+                    "images": images,
+                    "metadata": metadata,
+                }
+            )
 
         # Stream responses
         event_count = 0
@@ -1205,6 +1588,34 @@ async def investigate(investigate_request: InvestigateRequest, http_request: Req
     thread_id = investigate_request.thread_id or f"thread-{uuid.uuid4().hex[:8]}"
     is_new = thread_id not in _background_tasks
 
+    # Checks that may reject the request run before any per-thread state is
+    # touched, so a rejected request cannot alter a live thread.
+    metadata_error = _rt.validate_metadata(investigate_request.metadata)
+    if metadata_error:
+        return _rt.reject(400, _rt.REASON_INVALID_REQUEST, metadata_error)
+    automatic = _rt.is_automatic(investigate_request.trigger_source)
+    # A run started via POST /investigations is drained server-side; a second
+    # reader on the same response queue would split its events.
+    detached_run_active = thread_id in _drain_tasks or thread_id in _automatic_threads
+    if not is_new and (automatic or detached_run_active):
+        return _rt.reject(
+            409,
+            _rt.REASON_THREAD_ACTIVE,
+            "A run started without a stream is active on this thread; use "
+            "queue-message or wait for it to finish"
+            if detached_run_active
+            else "Automatic investigations need a thread with no active session",
+            thread_id=thread_id,
+        )
+    if automatic and not _gate.try_acquire():
+        return _rt.reject(
+            429,
+            _rt.REASON_CONCURRENCY_LIMIT,
+            "Concurrency limit reached; automatic investigations are not queued",
+            **_gate.snapshot(),
+        )
+    slot_reserved = automatic
+
     team_token = _extract_team_token(http_request)
     if team_token:
         _team_token_by_thread[thread_id] = team_token
@@ -1227,7 +1638,7 @@ async def investigate(investigate_request: InvestigateRequest, http_request: Req
 
     print(f"🔍 Investigation: thread={thread_id}, new={is_new}")
 
-    if is_new:
+    if is_new and not automatic:
         await _ensure_background_task(
             thread_id, resume_session_id=investigate_request.resume_session_id
         )
@@ -1270,6 +1681,24 @@ async def investigate(investigate_request: InvestigateRequest, http_request: Req
             for img in investigate_request.images
         ]
 
+    submitted_queue = None
+    if automatic:
+        try:
+            if file_downloads:
+                _download_file_attachments(file_downloads, thread_id)
+            submitted_queue = await _submit_run(
+                thread_id,
+                investigate_request.prompt,
+                automatic=True,
+                slot_reserved=slot_reserved,
+                metadata=investigate_request.metadata,
+                images=images,
+                resume_session_id=investigate_request.resume_session_id,
+            )
+        except Exception:
+            _gate.release()
+            raise
+
     stream = create_investigation_stream(
         thread_id,
         investigate_request.prompt,
@@ -1277,6 +1706,8 @@ async def investigate(investigate_request: InvestigateRequest, http_request: Req
         images,
         file_downloads,
         resume_session_id=investigate_request.resume_session_id,
+        metadata=investigate_request.metadata,
+        submitted_queue=submitted_queue,
     )
 
     return StreamingResponse(
@@ -1287,6 +1718,129 @@ async def investigate(investigate_request: InvestigateRequest, http_request: Req
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@app.post("/investigations", status_code=202)
+async def start_investigation(body: StartInvestigationRequest, http_request: Request):
+    """Start an investigation and return immediately (no SSE stream).
+
+    Auth: ``Authorization: Bearer <AGENT_INTERNAL_TOKEN>`` when that env is
+    set. Tenancy: optional ``X-OpenSRE-Team-Token`` (else OPENSRE_TENANT_ID /
+    OPENSRE_TEAM_ID). Responses use {"success", "result", "error"}.
+
+    - trigger_source "alert": automatic. 429 reason=concurrency_limit when no
+      slot is free (never queued); runs non-interactively; the SDK session is
+      closed after the run.
+    - any other allowed trigger_source: waits for a slot (status "queued").
+    - 409 reason=thread_active if the thread already has a live session.
+    """
+    auth_error = _rt.internal_auth_error(http_request)
+    if auth_error is not None:
+        return auth_error
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return _rt.reject(
+            503, _rt.REASON_NOT_CONFIGURED, "ANTHROPIC_API_KEY not configured"
+        )
+
+    thread_id = (body.thread_id or "").strip()
+    raw_source = (body.trigger_source or "api").strip().lower()
+    error = (
+        _rt.validate_thread_id(thread_id)
+        or _rt.validate_metadata(body.metadata)
+        or (None if (body.prompt or "").strip() else "prompt is required")
+        or (
+            None
+            if raw_source in _ALLOWED_TRIGGER_SOURCES
+            else f"trigger_source must be one of {sorted(_ALLOWED_TRIGGER_SOURCES)}"
+        )
+    )
+    if error:
+        return _rt.reject(400, _rt.REASON_INVALID_REQUEST, error)
+    automatic = _rt.is_automatic(raw_source)
+
+    if thread_id in _background_tasks:
+        current = _run_status.get(thread_id) or {}
+        return _rt.reject(
+            409,
+            _rt.REASON_THREAD_ACTIVE,
+            "Thread already has an active session; use queue-message while it "
+            "runs, or a new thread_id",
+            thread_id=thread_id,
+            status=current.get("status"),
+            run_id=current.get("run_id"),
+        )
+    if automatic and not _gate.try_acquire():
+        return _rt.reject(
+            429,
+            _rt.REASON_CONCURRENCY_LIMIT,
+            "Concurrency limit reached; automatic investigations are not queued",
+            **_gate.snapshot(),
+        )
+
+    run_id = uuid.uuid4().hex
+    try:
+        team_token = (http_request.headers.get("X-OpenSRE-Team-Token") or "").strip()
+        if team_token:
+            _team_token_by_thread[thread_id] = team_token
+            _team_identity_by_thread[thread_id] = _resolve_team_identity(team_token)
+        _trigger_source_by_thread[thread_id] = raw_source
+        actor = _normalize_trigger_actor(body.trigger_actor)
+        if actor:
+            _trigger_actor_by_thread[thread_id] = actor
+        else:
+            _trigger_actor_by_thread.pop(thread_id, None)
+        response_queue = await _submit_run(
+            thread_id,
+            body.prompt,
+            automatic=automatic,
+            slot_reserved=automatic,
+            run_id=run_id,
+            metadata=body.metadata,
+        )
+    except Exception as e:
+        if automatic:
+            _gate.release()
+        logger.error(f"[ASYNC] start failed for thread {thread_id}: {e}", exc_info=True)
+        return _rt.reject(500, "internal_error", "Failed to start investigation")
+
+    _drain_tasks[thread_id] = asyncio.create_task(
+        _drain_responses(thread_id, response_queue), name=f"drain-{thread_id}"
+    )
+    status = (_run_status.get(thread_id) or {}).get("status", "queued")
+    logger.info(
+        f"[ASYNC] started thread={thread_id} run={run_id} source={raw_source} "
+        f"status={status}"
+    )
+    return _rt.envelope(
+        success=True,
+        result={
+            "thread_id": thread_id,
+            "run_id": run_id,
+            "status": status,
+            "trigger_source": raw_source,
+            "concurrency": _gate.snapshot(),
+        },
+        status_code=202,
+    )
+
+
+@app.get("/investigations/{thread_id}")
+async def investigation_status(thread_id: str, http_request: Request):
+    """Status of the latest run on a thread (in-memory; lost on restart).
+
+    status: queued | running | completed | failed | interrupted | timeout.
+    Durable history: config-service agent_runs (correlation_id = thread_id).
+    """
+    auth_error = _rt.internal_auth_error(http_request)
+    if auth_error is not None:
+        return auth_error
+    record = _run_status.get(thread_id)
+    if record is None:
+        return _rt.reject(
+            404, _rt.REASON_NOT_FOUND, f"No run known for thread {thread_id}"
+        )
+    record["session_active"] = thread_id in _background_tasks
+    return _rt.envelope(success=True, result=record)
 
 
 @app.post("/interrupt")
@@ -1333,6 +1887,7 @@ async def queue_message(thread_id: str, body: QueueMessageRequest):
         pending_count = session.enqueue_message(text)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+    _touch_thread(thread_id)
 
     response_queue = _response_queues.get(thread_id)
     if response_queue is not None:
