@@ -88,6 +88,13 @@ scrape_configs:
     static_configs:
       - targets: ["kube-state-metrics.observability.svc.cluster.local:8080"]
 
+  # forseti: synthetic "noisy" exporter (per-user / flapping / low-threshold alerts)
+  - job_name: synthetic-exporter
+    static_configs:
+      - targets: ["synthetic-exporter.observability.svc.cluster.local:9100"]
+        labels:
+          namespace: observability
+
   # forseti: container CPU/memory (cAdvisor) through the API server node proxy,
   # i.e. the series kube-prometheus style rules use
   # (container_cpu_usage_seconds_total, container_memory_working_set_bytes).

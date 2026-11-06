@@ -1,0 +1,52 @@
+# Deliberately noisy rules on the synthetic exporter. They exist to produce
+# alerts that a human should triage as noise / tune, not investigate:
+#   SyntheticLoginFailuresPerUser  one alert per user_id (high-cardinality label)
+#   SyntheticQueueDepthFlapping    fires/resolves every few minutes
+#   SyntheticDiskUsageHigh         threshold far below a real problem
+groups:
+  - name: synthetic-noisy
+    rules:
+      - alert: SyntheticLoginFailuresPerUser
+        # Anti-pattern on purpose: no aggregation over user_id.
+        expr: rate(synthetic_login_failures_total{job="synthetic-exporter"}[2m]) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+          scom: "true"
+          team: identity
+        annotations:
+          summary: "Login failures for {{ $labels.user_id }} on {{ $labels.service }}"
+          description: >-
+            User {{ $labels.user_id }} has {{ $value | printf "%.2f" }} failed logins/s
+            on {{ $labels.service }} (namespace {{ $labels.namespace }}). One alert per
+            user: a single upstream problem shows up as ~20 alerts.
+          runbook_url: https://runbooks.local/synthetic/login-failures-per-user
+
+      - alert: SyntheticQueueDepthFlapping
+        # Anti-pattern on purpose: short `for` on a metric that oscillates.
+        expr: synthetic_queue_depth{job="synthetic-exporter"} > 100
+        for: 30s
+        labels:
+          severity: warning
+          team: orders
+        annotations:
+          summary: "Queue {{ $labels.queue }} depth above 100 on {{ $labels.service }}"
+          description: >-
+            Queue {{ $labels.queue }} has {{ $value }} messages waiting
+            ({{ $labels.service }}, namespace {{ $labels.namespace }}).
+          runbook_url: https://runbooks.local/synthetic/queue-depth
+
+      - alert: SyntheticDiskUsageHigh
+        # Anti-pattern on purpose: 50% is not "almost full", yet severity critical.
+        expr: synthetic_disk_usage_ratio{job="synthetic-exporter"} > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          scom: "true"
+          team: reporting
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} on {{ $labels.service }} above 50%"
+          description: >-
+            {{ $labels.mountpoint }} on {{ $labels.service }} (namespace
+            {{ $labels.namespace }}) is {{ $value | humanizePercentage }} full.
+          runbook_url: https://runbooks.local/synthetic/disk-usage

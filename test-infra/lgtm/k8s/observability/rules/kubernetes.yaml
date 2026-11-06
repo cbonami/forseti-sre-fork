@@ -1,0 +1,132 @@
+# Kubernetes alerts from kube-state-metrics (object state) and cAdvisor
+# (container usage). `service` comes from the pod labels
+# app.kubernetes.io/component (otel-demo) or app.kubernetes.io/name, via the
+# recording rule namespace_pod:service:info.
+groups:
+  - name: kubernetes-recording
+    rules:
+      - record: namespace_pod:service:info
+        expr: |
+          max by (namespace, pod, service) (
+            label_replace(
+              label_replace(kube_pod_labels, "service", "$1", "label_app_kubernetes_io_name", "(.+)"),
+              "service", "$1", "label_app_kubernetes_io_component", "(.+)"
+            )
+          )
+
+  - name: kubernetes-workloads
+    rules:
+      - alert: KubePodNotReady
+        expr: |
+          (
+            sum by (namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}) > 0
+            or
+            (
+              sum by (namespace, pod) (kube_pod_status_ready{condition="true"}) == 0
+              and on (namespace, pod)
+              sum by (namespace, pod) (kube_pod_status_phase{phase="Running"}) == 1
+            )
+          )
+          * on (namespace, pod) group_left (service) namespace_pod:service:info
+        for: 3m
+        labels:
+          severity: warning
+          scom: "true"
+        annotations:
+          summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not ready"
+          description: >-
+            Pod {{ $labels.pod }} ({{ $labels.service }}) in namespace
+            {{ $labels.namespace }} has not been ready for more than 3 minutes.
+          runbook_url: https://runbooks.local/kubernetes/pod-not-ready
+
+      - alert: KubePodRestartingFrequently
+        expr: |
+          (
+            sum by (namespace, pod, container) (increase(kube_pod_container_status_restarts_total[15m])) >= 2
+          )
+          * on (namespace, pod) group_left (service) namespace_pod:service:info
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} restarting"
+          description: >-
+            Container {{ $labels.container }} of pod {{ $labels.pod }}
+            ({{ $labels.service }}) restarted {{ $value | printf "%.0f" }} times in 15 minutes.
+          runbook_url: https://runbooks.local/kubernetes/pod-restarts
+
+      - alert: KubeContainerCrashLooping
+        expr: |
+          (
+            max by (namespace, pod, container) (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}) == 1
+          )
+          * on (namespace, pod) group_left (service) namespace_pod:service:info
+        for: 2m
+        labels:
+          severity: critical
+          scom: "true"
+        annotations:
+          summary: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+          description: >-
+            Container {{ $labels.container }} of pod {{ $labels.pod }} ({{ $labels.service }})
+            is in CrashLoopBackOff.
+          runbook_url: https://runbooks.local/kubernetes/crashloop
+
+  - name: kubernetes-resources
+    # cAdvisor series are used at POD level (pod!="", container=""): on
+    # Rancher Desktop's docker runtime (cri-dockerd) cAdvisor cannot attribute
+    # container cgroups, only pod cgroups carry namespace/pod labels. The
+    # pod-level series also exist on containerd clusters (AKS), so these
+    # expressions are portable and never double-count containers.
+    rules:
+      - alert: PodCpuHigh
+        # Most demo containers have no CPU limit, so use absolute cores.
+        expr: |
+          (
+            sum by (namespace, pod) (
+              rate(container_cpu_usage_seconds_total{job="kubernetes-cadvisor", pod!="", container=""}[2m])
+            ) > 0.5
+          )
+          * on (namespace, pod) group_left (service) namespace_pod:service:info
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU in {{ $labels.namespace }}/{{ $labels.pod }}"
+          description: >-
+            Pod {{ $labels.pod }} ({{ $labels.service }}) uses
+            {{ $value | printf "%.2f" }} CPU cores (threshold 0.5) for 5 minutes.
+          runbook_url: https://runbooks.local/kubernetes/cpu-high
+
+      - alert: PodMemoryGrowthToLimit
+        # Linear growth over 30m predicts the pod's memory limit is hit within
+        # 1h, usage is already above 50% of it, and the pod is older than 30m
+        # (start-up ramp of JVM/Kafka pods is not a leak).
+        expr: |
+          (
+            (
+              max by (namespace, pod) (
+                predict_linear(container_memory_working_set_bytes{job="kubernetes-cadvisor", pod!="", container=""}[30m], 3600)
+              )
+              > sum by (namespace, pod) (kube_pod_container_resource_limits{resource="memory"})
+            )
+            and on (namespace, pod)
+            (
+              max by (namespace, pod) (container_memory_working_set_bytes{job="kubernetes-cadvisor", pod!="", container=""})
+              / sum by (namespace, pod) (kube_pod_container_resource_limits{resource="memory"})
+              > 0.5
+            )
+            and on (namespace, pod)
+            (time() - max by (namespace, pod) (kube_pod_start_time) > 1800)
+          )
+          * on (namespace, pod) group_left (service) namespace_pod:service:info
+        for: 10m
+        labels:
+          severity: warning
+          scom: "true"
+        annotations:
+          summary: "Memory of {{ $labels.namespace }}/{{ $labels.pod }} growing towards its limit"
+          description: >-
+            Working set of pod {{ $labels.pod }} ({{ $labels.service }}) is predicted
+            to exceed its memory limit within 1 hour (now above 50% of the limit).
+          runbook_url: https://runbooks.local/kubernetes/memory-growth

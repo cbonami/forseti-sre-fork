@@ -1,0 +1,65 @@
+# RED alerts for the OpenTelemetry Demo, from the demo collector's
+# span_metrics connector (traces_span_metrics_*; OTLP -> Prometheus with
+# resource attributes promoted: service_name, k8s_namespace_name, ...).
+# Tempo's metrics-generator writes an equivalent traces_spanmetrics_* family.
+#
+# load-generator is excluded: with the demo's agent component disabled, its
+# ask_agent task always fails (client spans), which is test traffic, not a
+# service problem.
+groups:
+  - name: otel-demo-red
+    rules:
+      - alert: ServiceHighErrorRate
+        # >5% of server/consumer spans fail, and at least 3 errors in 5m so a
+        # single failure on a low-traffic service does not page.
+        expr: |
+          (
+            sum by (service_name, k8s_namespace_name) (
+              rate(traces_span_metrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service_name!="load-generator"}[5m])
+            )
+            /
+            sum by (service_name, k8s_namespace_name) (
+              rate(traces_span_metrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service_name!="load-generator"}[5m])
+            )
+          ) > 0.05
+          and
+          sum by (service_name, k8s_namespace_name) (
+            increase(traces_span_metrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", status_code="STATUS_CODE_ERROR", service_name!="load-generator"}[5m])
+          ) >= 3
+        for: 1m
+        labels:
+          severity: critical
+          scom: "true"
+          service: "{{ $labels.service_name }}"
+          namespace: "{{ $labels.k8s_namespace_name }}"
+        annotations:
+          summary: "High error rate on {{ $labels.service_name }}"
+          description: >-
+            {{ $value | humanizePercentage }} of server/consumer spans of
+            {{ $labels.service_name }} (namespace {{ $labels.k8s_namespace_name }})
+            failed over the last 5 minutes (threshold 5%).
+          runbook_url: https://runbooks.local/otel-demo/high-error-rate
+
+      - alert: ServiceHighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, service_name, k8s_namespace_name) (
+              rate(traces_span_metrics_duration_milliseconds_bucket{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service_name!="load-generator"}[5m])
+            )
+          ) > 1000
+          and
+          sum by (service_name, k8s_namespace_name) (
+            rate(traces_span_metrics_calls_total{span_kind=~"SPAN_KIND_SERVER|SPAN_KIND_CONSUMER", service_name!="load-generator"}[5m])
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service_name }}"
+          namespace: "{{ $labels.k8s_namespace_name }}"
+        annotations:
+          summary: "p95 latency of {{ $labels.service_name }} above 1s"
+          description: >-
+            p95 duration of server/consumer spans of {{ $labels.service_name }}
+            (namespace {{ $labels.k8s_namespace_name }}) is {{ $value | printf "%.0f" }} ms
+            over the last 5 minutes (threshold 1000 ms).
+          runbook_url: https://runbooks.local/otel-demo/high-latency
